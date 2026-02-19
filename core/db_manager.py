@@ -26,7 +26,7 @@ class DBManager:
         )
 
         self.db = self.client[self.db_name]
-        self.collection = self.db["video_tasks"]
+        self.collection = self.db["video_tasks_gork"]
 
         self.base_dir = "data/generated_videos_folder"
         os.makedirs(self.base_dir, exist_ok=True)

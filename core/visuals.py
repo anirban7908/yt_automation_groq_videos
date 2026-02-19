@@ -3,7 +3,6 @@ import time
 import requests
 import random
 import re
-# import ollama <--- REMOVED (Not used here)
 from core.db_manager import DBManager
 from dotenv import load_dotenv
 from PIL import Image
@@ -26,8 +25,41 @@ class VisualScout:
         except:
             return False
 
+    # 🟢 NEW: Fetch Actual B-Roll Video from Pexels
+    def use_pexels_video_search(self, query, path):
+        if not self.pexels_key:
+            return False
+            
+        print(f"      🎥 Pexels Video Search: hunting for '{query}'...")
+        try:
+            # orientation=portrait fetches Shorts-friendly vertical videos
+            url = f"https://api.pexels.com/videos/search?query={query}&per_page=5&orientation=portrait"
+            res = requests.get(url, headers={"Authorization": self.pexels_key}, timeout=10)
+            
+            if res.status_code == 200 and res.json().get("videos"):
+                videos = res.json()["videos"]
+                if videos:
+                    # Get the first video and find an mp4 file link
+                    video_files = videos[0]["video_files"]
+                    mp4_files = [v for v in video_files if v['file_type'] == 'video/mp4']
+                    
+                    if mp4_files:
+                        # Sort to pick a decent resolution without overloading memory (e.g., HD)
+                        mp4_files = sorted(mp4_files, key=lambda x: x.get('width', 0) * x.get('height', 0), reverse=True)
+                        video_url = mp4_files[0]["link"]
+                        
+                        content = requests.get(video_url, timeout=20).content
+                        with open(path, "wb") as f:
+                            f.write(content)
+                        print("      ✅ Pexels Video Secured.")
+                        return True
+        except Exception as e:
+            print(f"      ❌ Pexels Video Search Failed: {e}")
+            
+        return False
+
     def use_stock_search(self, query, path):
-        # 1. Unsplash
+        # 1. Unsplash (Fallback for images)
         if self.unsplash_key:
             try:
                 url = f"https://api.unsplash.com/search/photos?query={query}&per_page=3&client_id={self.unsplash_key}"
@@ -42,7 +74,7 @@ class VisualScout:
             except:
                 pass
 
-        # 2. Pexels
+        # 2. Pexels Image (Fallback)
         if self.pexels_key:
             try:
                 url = f"https://api.pexels.com/v1/search?query={query}&per_page=3"
@@ -60,33 +92,22 @@ class VisualScout:
                 pass
         return False
 
-    # 🟢 NEW: Google Image Scraper for specific Main Topics
     def search_google_images(self, query, path):
-        print(f"      🌍 Web Search: hunting for '{query}'...")
+        print(f"      🌍 Web Search (Image): hunting for '{query}'...")
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36"
         }
 
         try:
-            # 1. Search Google Images
-            url = f"https://www.google.com/search?q={query}&tbm=isch&udm=2"  # udm=2 forces new image layout
+            url = f"https://www.google.com/search?q={query}&tbm=isch&udm=2"
             res = requests.get(url, headers=headers, timeout=10)
-
-            # 2. Extract first valid image URL using Regex (looks for http...jpg/png inside script tags)
-            # This pattern finds the large original images in Google's data blobs
             matches = re.findall(r'"(https?://[^"]+?\.(?:jpg|jpeg|png))"', res.text)
 
             if matches:
-                # Try the first 3 matches (sometimes the first is a logo or icon)
                 for img_url in matches[:3]:
                     try:
-                        # Decrypt unicode (e.g. \u003d -> =)
                         img_url = img_url.encode().decode("unicode_escape")
-
-                        # Download
-                        img_data = requests.get(
-                            img_url, headers=headers, timeout=5
-                        ).content
+                        img_data = requests.get(img_url, headers=headers, timeout=5).content
                         if self.is_valid_image(img_data):
                             with open(path, "wb") as f:
                                 f.write(img_data)
@@ -114,45 +135,54 @@ class VisualScout:
             keywords = scene.get("keywords", ["nature"])
             count = scene.get("image_count", 1)
 
-            image_paths = []
+            visual_paths = []
 
             for j in range(count):
                 kw = keywords[j % len(keywords)]
-                filename = f"scene_{i}_img_{j}.jpg"
-                path = os.path.join(folder, filename)
+                base_filename = f"scene_{i}_visual_{j}"
+                print(f"   🖼️ Scene {i+1} (Visual {j+1}/{count}): Search '{kw}'")
 
-                print(f"   🖼️ Scene {i+1} (Img {j+1}/{count}): Search '{kw}'")
+                saved_path = None
 
-                success = False
-
-                # 🟢 LOGIC UPDATE: Force Web Search for the HERO IMAGE (Scene 0, Image 0)
-                # This ensures the "Main Topic" (e.g. Moflin) is shown first.
+                # 1. Hero Image Force Web Search (Scene 0, Image 0)
                 if i == 0 and j == 0:
-                    success = self.search_google_images(kw, path)
+                    path_jpg = os.path.join(folder, base_filename + ".jpg")
+                    if self.search_google_images(kw, path_jpg):
+                        saved_path = path_jpg
 
-                # If Web search wasn't used or failed, try Stock sites
-                if not success:
-                    success = self.use_stock_search(kw, path)
+                # 2. Try Pexels Video (.mp4)
+                if not saved_path:
+                    path_mp4 = os.path.join(folder, base_filename + ".mp4")
+                    if self.use_pexels_video_search(kw, path_mp4):
+                        saved_path = path_mp4
 
-                # 🟢 FALLBACK: If specific keyword fails, try others in the list
-                if not success:
+                # 3. Fallback to Stock Images (.jpg)
+                if not saved_path:
+                    path_jpg = os.path.join(folder, base_filename + ".jpg")
+                    if self.use_stock_search(kw, path_jpg):
+                        saved_path = path_jpg
+
+                # 4. Fallback to other keywords if specific one failed entirely
+                if not saved_path:
                     for fallback_kw in keywords:
                         if fallback_kw != kw:
-                            print(
-                                f"      ⚠️ '{kw}' failed. Retrying with '{fallback_kw}'..."
-                            )
-                            if self.use_stock_search(fallback_kw, path):
-                                success = True
+                            print(f"      ⚠️ '{kw}' failed. Retrying video with '{fallback_kw}'...")
+                            path_mp4 = os.path.join(folder, base_filename + ".mp4")
+                            if self.use_pexels_video_search(fallback_kw, path_mp4):
+                                saved_path = path_mp4
                                 break
 
-                # Final Fallback: Placeholder
-                if not success:
+                # 5. Final Fallback: Placeholder Image
+                if not saved_path:
                     print(f"      ❌ All searches failed. Using placeholder.")
-                    Image.new("RGB", (1080, 1920), (10, 10, 10)).save(path)
+                    path_jpg = os.path.join(folder, base_filename + ".jpg")
+                    Image.new("RGB", (1080, 1920), (10, 10, 10)).save(path_jpg)
+                    saved_path = path_jpg
 
-                image_paths.append(path)
+                visual_paths.append(saved_path)
 
-            scene["image_paths"] = image_paths
+            # Updated key from 'image_paths' to 'image_paths' (kept same for backward compatibility with db)
+            scene["image_paths"] = visual_paths
             updated_scenes.append(scene)
             time.sleep(1)
 

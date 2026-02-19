@@ -4,10 +4,18 @@ import math
 from mutagen.mp3 import MP3
 from core.db_manager import DBManager
 
-
 class VoiceEngine:
     def __init__(self):
         self.db = DBManager()
+        
+        # 🟢 NEW: Map Niches to specific, more expressive neural voices
+        self.voice_map = {
+            "motivation": "en-US-ChristopherNeural",  # Energetic, authoritative
+            "space": "en-GB-RyanNeural",              # Documentary, professional
+            "nature": "en-US-AriaNeural",             # Calming, engaging female voice
+            "history": "en-GB-SoniaNeural",           # Classic storyteller female voice
+            "general": "en-US-GuyNeural"              # Standard fallback
+        }
 
     async def generate_audio(self):
         task = self.db.collection.find_one({"status": "scripted"})
@@ -16,8 +24,12 @@ class VoiceEngine:
 
         folder = task.get("folder_path")
         scenes = task.get("script_data", [])
+        niche = task.get("niche", "general").lower()
 
-        print(f"🎙️ Generating Audio ({len(scenes)} segments)...")
+        # Determine the best voice for this video's emotional tone
+        selected_voice = self.voice_map.get(niche, "en-US-GuyNeural")
+
+        print(f"🎙️ Generating Audio ({len(scenes)} segments) using {selected_voice}...")
 
         updated_scenes = []
         for i, scene in enumerate(scenes):
@@ -26,23 +38,17 @@ class VoiceEngine:
             text = scene["text"]
 
             try:
-                # 🟢 SPEED BOOST: +10% (Kept your speed preference)
-                communicate = edge_tts.Communicate(text, "en-US-GuyNeural", rate="+10%")
+                # 🟢 Apply the dynamically selected voice
+                communicate = edge_tts.Communicate(text, selected_voice, rate="+10%")
                 await communicate.save(path)
 
                 duration = MP3(path).info.length
 
-                # Update scene data
                 scene["audio_path"] = path
                 scene["duration"] = duration
 
-                # 🟢 THE FIX: TIME-BASED CALCULATION
-                # Rule: Max 4.0 seconds per image.
-                # logic: ceil(duration / 4.0) ensures we never exceed 4s per image
-                # but splits the time equally.
                 required_images = math.ceil(duration / 4.0)
                 scene["image_count"] = max(1, int(required_images))
-
                 img_duration = duration / scene["image_count"]
 
                 updated_scenes.append(scene)

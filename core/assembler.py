@@ -6,12 +6,12 @@ from moviepy import (
     TextClip,
     CompositeVideoClip,
     ImageClip,
+    VideoFileClip,  # 🟢 NEW: Added VideoFileClip
     concatenate_videoclips,
 )
 from core.db_manager import DBManager
 
 FONT_PATH = r"C:\Windows\Fonts\arial.ttf"
-
 
 class VideoAssembler:
     def __init__(self):
@@ -25,8 +25,8 @@ class VideoAssembler:
 
         scenes = task.get("script_data", [])
         folder = task["folder_path"]
-        video_title = task.get("title", "").upper()  # Get title for the hook
-        print(f"🎞️ Assembling {len(scenes)} segments...")
+        video_title = task.get("title", "").upper()
+        print(f"🎞️ Assembling {len(scenes)} segments with dynamic Video/Image handling...")
 
         final_clips = []
 
@@ -34,19 +34,31 @@ class VideoAssembler:
             audio_path = scene["audio_path"]
             audio_clip = AudioFileClip(audio_path)
             duration = audio_clip.duration
-            img_paths = scene["image_paths"]
-            img_duration = duration / len(img_paths)
+            visual_paths = scene["image_paths"] # Holds both .mp4 and .jpg paths now
+            img_duration = duration / len(visual_paths)
 
             scene_clips = []
-            for img_path in img_paths:
+            for path in visual_paths:
                 try:
-                    clip = (
-                        ImageClip(img_path)
-                        .with_duration(img_duration)
-                        .resized(height=1920)
-                        .with_effects([vfx.Resize(lambda t: 1 + 0.04 * t)])
-                    )
+                    # 🟢 NEW: Dynamic File Handling (Video vs Image)
+                    if path.endswith(".mp4"):
+                        clip = VideoFileClip(path).without_audio()
+                        
+                        # Fix duration: If video is too short, loop it. If too long, trim it.
+                        if clip.duration < img_duration:
+                            clip = clip.with_effects([vfx.Loop(duration=img_duration)])
+                        else:
+                            clip = clip.subclipped(0, img_duration)
+                    else:
+                        # Fallback for static images (e.g. Hero Google image or placebolder)
+                        clip = (
+                            ImageClip(path)
+                            .with_duration(img_duration)
+                            .with_effects([vfx.Resize(lambda t: 1 + 0.04 * t)]) # Keep zoom for static images only
+                        )
 
+                    # 🟢 Standardize Resolution/Crop for YouTube Shorts (1080x1920)
+                    clip = clip.resized(height=1920)
                     if clip.w < 1080:
                         clip = clip.resized(width=1080)
                     clip = clip.cropped(
@@ -56,52 +68,46 @@ class VideoAssembler:
                         height=1920,
                     )
                     scene_clips.append(clip)
-                except:
-                    pass
+                except Exception as e:
+                    print(f"⚠️ Error processing visual {path}: {e}")
 
             if scene_clips:
                 scene_video = concatenate_videoclips(scene_clips).with_audio(audio_clip)
 
-                # 🟢 NEW: Add Title Hook to the FIRST SCENE (First 2 seconds)
+                # Title Hook logic (Same as before)
                 if i == 0:
                     try:
-                        # Create the Title Text
                         title_clip = (
                             TextClip(
                                 text=video_title,
-                                font=FONT_PATH,  # Make sure FONT_PATH is valid at top of file
+                                font=FONT_PATH,
                                 font_size=80,
                                 color="yellow",
                                 stroke_color="black",
                                 stroke_width=5,
                                 method="caption",
-                                size=(900, None),  # Wrap text within 900px width
+                                size=(900, None),
                                 margin=(20, 20),
                             )
                             .with_position("center")
-                            .with_duration(min(duration, 3))  # Show for max 3 seconds
+                            .with_duration(min(duration, 3))
                             .with_start(0)
                         )
-                        # Overlay text on video
                         scene_video = CompositeVideoClip([scene_video, title_clip])
                     except Exception as e:
                         print(f"⚠️ Could not add title hook: {e}")
 
                 final_clips.append(scene_video)
 
-        # Combine Scenes & Generate Captions (Rest of code remains same...)
+        # Combine Scenes & Generate Captions
         full_video = concatenate_videoclips(final_clips)
         full_audio_path = os.path.join(folder, "FULL_AUDIO_TEMP.mp3")
         full_video.audio.write_audiofile(full_audio_path)
-
-        # ... (Keep your existing caption logic here) ...
-        # (For brevity, I'm skipping the caption block, paste your existing caption logic here)
 
         print("📝 Generating Captions...")
         result = self.model.transcribe(full_audio_path, word_timestamps=True)
         caption_clips = []
 
-        # Re-paste your existing caption loop here
         for segment in result["segments"]:
             for word in segment["words"]:
                 txt = (
@@ -128,7 +134,6 @@ class VideoAssembler:
 
         out_path = os.path.join(folder, "FINAL_VIDEO.mp4")
 
-        # Use the "Best Quality" write settings we discussed
         final_export.write_videofile(
             out_path,
             fps=24,

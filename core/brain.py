@@ -35,6 +35,7 @@ class ScriptGenerator:
         source_url = task.get("source_url", "https://news.google.com")
 
         # PROMPT REMAINS EXACTLY THE SAME AS BEFORE
+        # PROMPT UPDATED FOR HOOK VARIETY AND EPIC CTA VISUALS
         prompt = f"""
             ROLE: Documentary Director.
             TASK: Convert this news into a structured video script.
@@ -51,28 +52,24 @@ class ScriptGenerator:
             
             4.  **METADATA**:
                 - 'title': MUST be "Clickbait" style. High curiosity. 
-                - BAD: "New Space Discovery"
-                - GOOD: "NASA Just Found THIS on Mars!?"
-                - GOOD: "You Won't Believe What Hubble Saw..."
                 - RULE: Use ALL CAPS for emphasis words. Max 50 chars.
                 - 'description': 3-sentence summary + call to action.
                 - 'hashtags': #Viral #Shorts + 3 niche tags.
                 
             5. **CRITICAL - KEYWORD RULES (ZERO TOLERANCE)**:
                 - 'keywords': A list of exactly 2 string search terms.
-                - **NEVER leave this empty.** Even for the Outro/CTA scene.
-                - **SPECIFICITY**: Use specific names (e.g., "Sony Camera", "Elon Musk", "SpaceX Rocket").
-                - **FALLBACK**: If the scene is generic, use keywords like ["Abstract Tech Background", "News Studio"].
-                - **BAD**: [] or [""] -> THIS WILL CRASH THE SYSTEM.
-                - **GOOD**: ["Sony LinkBuds", "Earbuds"] or ["Subscribe Button", "Social Media"].
+                - **NEVER leave this empty.**
+                - **SPECIFICITY**: Use specific names (e.g., "Sony Camera", "Elon Musk").
             
-            6. **CRITICAL - CTA RULES**: 
+            6. **CRITICAL - CTA & OUTRO RULES**: 
                 - The FINAL SCENE must be a generic social media Call to Action.
-                - Example: "Follow us for more {niche} stories and daily discoveries!"
-                - **FORBIDDEN**: Do NOT say "Check out our full documentary", "Watch the full video", or "Link in bio". We do NOT have a full video. Keep it short.
+                - Example text: "Follow us for more {niche} stories and daily discoveries!"
+                - **VISUALS FOR CTA**: Do NOT use boring keywords like "laptop", "phone", or "green screen". Keep the visuals EPIC and tied to the {niche}. (e.g., if space, use ["Cinematic Galaxy", "Supernova"]. If motivation, use ["Man reaching summit", "Victory"]).
             
             7. **NARRATION ('text')**:
-                - Scene 1 MUST be a "Hook". (e.g., "Stop scrolling, you need to see this.")
+                - Scene 1 MUST be a "Hook". 
+                - **CRITICAL**: DO NOT always use "Stop scrolling". Be creative!
+                - Good Examples: "You won't believe this...", "This changes everything...", "Listen to this...", "What if I told you...", "Scientists are baffled by this..."
                 - Keep sentences punchy and conversational.
             
             OUTPUT FORMAT (JSON ONLY):
@@ -90,7 +87,6 @@ class ScriptGenerator:
                 ]
             }}
         """
-
         try:
             print(f"🧠 Groq Director: Segmenting {niche.upper()} story...")
 

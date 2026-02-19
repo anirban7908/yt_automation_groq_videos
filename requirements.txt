@@ -1,27 +1,31 @@
-# Audio & Video Processing
-edge-tts              # Used in voice.py for text-to-speech
-moviepy               # Used in assembler.py for video editing
-mutagen               # Used in voice.py for MP3 metadata/duration
-openai-whisper        # Used in assembler.py for transcription (Import is 'whisper')
+# Audio & Video Processing [cite: 1]
+edge-tts              # Used in voice.py for text-to-speech [cite: 1]
+moviepy               # Used in assembler.py for video editing [cite: 1]
+mutagen               # Used in voice.py for MP3 metadata/duration [cite: 1]
+openai-whisper        # Used in assembler.py for transcription (Import is 'whisper') [cite: 1]
 
-# Computer Vision & Image Processing
-opencv-python         # Used in verifier.py (Import is 'cv2')
-Pillow                # Used in visuals.py (Import is 'PIL')
-scikit-image          # Used in verifier.py (Import is 'skimage')
-numpy                 # Used in verifier.py for matrix operations
+# Computer Vision & Image Processing [cite: 1]
+opencv-python         # Used in verifier.py (Import is 'cv2') [cite: 1, 2]
+Pillow                # Used in visuals.py (Import is 'PIL') 
+scikit-image          # Used in verifier.py (Import is 'skimage') 
+numpy                 # Used in verifier.py for matrix operations 
 
-# AI & LLM Integration
-ollama                # Used in brain.py, scraper.py, and visuals.py
+# AI & LLM Integration 
+groq                  # Used in brain.py and scraper.py for LLM calls
 
-# Database & Environment
-pymongo               # Used in db_manager.py for MongoDB connection
-python-dotenv         # Used in db_manager.py and visuals.py for .env loading
+# Database & Environment 
+pymongo               # Used in db_manager.py for MongoDB connection [cite: 2, 3]
+python-dotenv         # Used in db_manager.py and visuals.py for .env loading [cite: 3]
+certifi               # Used in db_manager.py for secure MongoDB SSL connections
 
-# Web Scraping & Networking
-feedparser            # Used in scraper.py for RSS feeds
-requests              # Used in scraper.py and visuals.py
+# Web Scraping & Networking [cite: 3]
+feedparser            # Used in scraper.py for RSS feeds [cite: 3]
+requests              # Used in scraper.py and visuals.py [cite: 3]
 
-# YouTube API & Google Auth
-google-api-python-client  # Used in uploader.py
-google-auth-oauthlib      # Used in uploader.py
-google-auth               # Used in uploader.py
+# Automation & Scheduling
+schedule              # Used in scheduler.py to trigger daily jobs
+
+# YouTube API & Google Auth [cite: 3]
+google-api-python-client  # Used in uploader.py [cite: 3]
+google-auth-oauthlib      # Used in uploader.py [cite: 3]
+google-auth               # Used in uploader.py [cite: 3, 4]
