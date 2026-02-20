@@ -3,7 +3,7 @@ import asyncio
 import argparse
 import json
 import os
-import glob  # <--- WAS MISSING
+import glob
 import datetime
 from core.scraper import NewsScraper
 from core.brain import ScriptGenerator
@@ -15,13 +15,62 @@ from core.uploader import YouTubeUploader
 from core.db_manager import DBManager
 
 
-def run_creation_pipeline(slot_name):
+def run_creation_pipeline(slot_name, is_manual=False):
     print(f"\n🎬 STARTING PRODUCTION PIPELINE: {slot_name.upper()}")
 
-    # 1. SCRAPER
-    print("---------------------------------------")
-    scraper = NewsScraper()
-    scraper.scrape_targeted_niche(forced_slot=slot_name)
+    # 🟢 NEW: Manual Flag Logic vs Automated Scraper
+    if is_manual:
+        print("---------------------------------------")
+        print("🛠️ MANUAL OVERRIDE ENGAGED")
+        topic = input("📝 Enter the Topic/Title: ")
+        content = input("📄 Enter the Content/Idea: ")
+
+        scraper = NewsScraper()
+        db = DBManager()
+        feedback = ""
+        success = False
+
+        for attempt in range(1, 6):
+            print(f"\n🧠 AI is refining your idea (Attempt {attempt}/5)...")
+            refined_content = scraper.refine_user_idea(topic, content, feedback)
+
+            print("\n✨ --- REFINED IDEA --- ✨")
+            print(refined_content)
+            print("------------------------")
+
+            is_correct = input("✅ Is this response correct for your idea? (y/n): ")
+
+            if is_correct.lower() == "y":
+                db.add_task(
+                    title=topic,
+                    content=refined_content,
+                    source="manual",
+                    status="pending",
+                    # Respects the niche slot logic from the scheduler
+                    extra_data={
+                        "niche": "general",
+                        "niche_slot": slot_name,
+                        "source_url": "Manual Input",
+                    },
+                )
+                success = True
+                print("💾 Manual task saved to database!")
+                break
+            else:
+                if attempt < 5:
+                    feedback = input("💬 What should the AI change or improve?: ")
+
+        if not success:
+            print(
+                "\n❌ Max attempts (5) reached. Please change the topic and run the script again."
+            )
+            return  # Halts the pipeline so it doesn't process an empty task
+
+    else:
+        print("---------------------------------------")
+        print("🤖 Running Automated AI Scraper Flow...")
+        scraper = NewsScraper()
+        scraper.scrape_targeted_niche(forced_slot=slot_name)
 
     # 2. BRAIN (Scripting with Groq)
     print("---------------------------------------")
@@ -88,7 +137,6 @@ def run_creation_pipeline(slot_name):
     else:
         print("⚠️ Log skipped (No upload confirmed).")
 
-    # 🟢 MOVED OUTSIDE 'if' STATEMENT so it always runs
     print("---------------------------------------")
     print("🧹 Cleaning up temporary metadata files...")
 
@@ -105,7 +153,20 @@ def run_creation_pipeline(slot_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("slot", help="The time slot", default="noon")
+    # nargs="?" allows the slot to be optional if you just want to run --manual
+    parser.add_argument(
+        "slot",
+        nargs="?",
+        help="The time slot (morning/noon/evening/night)",
+        default="noon",
+    )
+
+    # 🟢 NEW: The --manual flag
+    parser.add_argument(
+        "--manual",
+        action="store_true",
+        help="Trigger the manual AI input refinement loop",
+    )
     args = parser.parse_args()
 
-    run_creation_pipeline(args.slot)
+    run_creation_pipeline(args.slot, args.manual)

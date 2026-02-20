@@ -135,7 +135,7 @@ class NewsScraper:
             print(f"      ❌ Groq Error: {e}. Fallback to random.")
             return random.choice(candidates)
 
-   # 🟢 NEW: Request Top 3 indices from the AI
+    # 🟢 NEW: Request Top 3 indices from the AI
     def pick_top_3_viral_topics(self, candidates, niche):
         """
         Uses Groq (Cloud AI) to analyze titles and pick the TOP 3 click-worthy ones.
@@ -160,20 +160,26 @@ class NewsScraper:
         """
 
         try:
-            print(f"   🤖 Groq Judge: Analyzing {len(candidates)} headlines for the Top 3...")
+            print(
+                f"   🤖 Groq Judge: Analyzing {len(candidates)} headlines for the Top 3..."
+            )
 
             chat_completion = self.client.chat.completions.create(
                 messages=[
-                    {"role": "system", "content": "You output ONLY valid JSON dictionaries."},
-                    {"role": "user", "content": prompt}
+                    {
+                        "role": "system",
+                        "content": "You output ONLY valid JSON dictionaries.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
                 model=self.model,
-                response_format={"type": "json_object"} 
+                response_format={"type": "json_object"},
             )
 
             content = chat_completion.choices[0].message.content.strip()
-            
+
             import json
+
             response_data = json.loads(content)
             indices = response_data.get("indices", [])
 
@@ -181,14 +187,41 @@ class NewsScraper:
             for index in indices[:3]:
                 if isinstance(index, int) and 0 <= index < len(candidates):
                     top_3_candidates.append(candidates[index])
-            
+
             print(f"      🏆 AI Selected 3 Potential Winners.")
             return top_3_candidates
 
         except Exception as e:
             print(f"      ❌ Groq Error: {e}. Fallback to random 3.")
             import random
+
             return random.sample(candidates, min(3, len(candidates)))
+
+    # 🟢 NEW: Manual Input AI Refinement
+    def refine_user_idea(self, topic, content, feedback=""):
+        prompt = f"""
+        TASK: You are a YouTube Viral Content Strategist.
+        The user has provided a raw idea for a video. Refine it into a highly engaging, viral-ready story summary (about 3-5 sentences) that can be easily turned into a script.
+        
+        RAW TOPIC: {topic}
+        RAW CONTENT: {content}
+        USER FEEDBACK ON PREVIOUS ATTEMPT (if any): {feedback}
+        
+        CRITERIA:
+        1. Make it sound dramatic, interesting, and tailored for YouTube Shorts.
+        2. Do NOT write the actual script scenes yet (the Brain module will do that later).
+        3. Return ONLY the refined summary. No conversational filler.
+        """
+
+        try:
+            chat_completion = self.client.chat.completions.create(
+                messages=[{"role": "user", "content": prompt}],
+                model=self.model,
+            )
+            return chat_completion.choices[0].message.content.strip()
+        except Exception as e:
+            print(f"❌ AI Refinement Error: {e}")
+            return content
 
     # 🟢 OPTIMIZED: The 4-Attempt Loop with Top 3 Batch Checking
     def scrape_targeted_niche(self, forced_slot=None):
@@ -204,12 +237,14 @@ class NewsScraper:
             entries = self.fetch_rss(url)
             for e in entries:
                 if hasattr(e, "title"):
-                    candidates.append({
-                        "title": e.title,
-                        "summary": getattr(e, "summary", e.title)[:3000],
-                        "link": getattr(e, "link", ""),
-                        "niche": niche,
-                    })
+                    candidates.append(
+                        {
+                            "title": e.title,
+                            "summary": getattr(e, "summary", e.title)[:3000],
+                            "link": getattr(e, "link", ""),
+                            "niche": niche,
+                        }
+                    )
 
         if not candidates:
             print("❌ No articles found in RSS feeds. Try a different slot.")
@@ -218,21 +253,23 @@ class NewsScraper:
         # Step 2: The Optimized Retry Loop
         attempts = 0
         max_tries = 4
-        
+
         while attempts < max_tries and len(candidates) >= 3:
             print(f"   🔄 Attempt {attempts + 1}/{max_tries} (Batch of 3)...")
-            
+
             # Ask AI for Top 3
             top_3 = self.pick_top_3_viral_topics(candidates, niche)
-            
+
             # Step 3: Check these 3 against the database
             unique_winners = []
             for candidate in top_3:
                 # 🟢 DB CONNECTION SAVER: We only query the DB 3 times per loop, not 50+ times!
-                is_duplicate = self.db.task_exists(candidate["title"], candidate["link"])
+                is_duplicate = self.db.task_exists(
+                    candidate["title"], candidate["link"]
+                )
                 if not is_duplicate:
                     unique_winners.append(candidate)
-                
+
                 # Remove from the raw candidate pool so AI doesn't pick it again next loop
                 if candidate in candidates:
                     candidates.remove(candidate)
@@ -241,21 +278,30 @@ class NewsScraper:
             if unique_winners:
                 # If multiple are unique, pick one randomly as requested
                 import random
+
                 final_winner = random.choice(unique_winners)
-                
-                print(f"      🎉 Unique Topic Secured: '{final_winner['title'][:40]}...'")
-                
+
+                print(
+                    f"      🎉 Unique Topic Secured: '{final_winner['title'][:40]}...'"
+                )
+
                 self.db.add_task(
                     final_winner["title"],
                     final_winner["summary"],
                     f"{niche.upper()}",
                     "pending",
-                    {"niche": niche, "niche_slot": slot, "source_url": final_winner["link"]},
+                    {
+                        "niche": niche,
+                        "niche_slot": slot,
+                        "source_url": final_winner["link"],
+                    },
                 )
-                return  
+                return
             else:
-                print("      ⚠️ All 3 AI choices were DB duplicates. Retrying with remaining pool...")
-            
+                print(
+                    "      ⚠️ All 3 AI choices were DB duplicates. Retrying with remaining pool..."
+                )
+
             attempts += 1
-            
+
         print("❌ Exceeded max retries. Could not find a unique viral topic today.")
