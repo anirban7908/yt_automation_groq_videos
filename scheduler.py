@@ -13,9 +13,8 @@ def job(slot):
     print(f"\n🔔 [{timestamp}] TRIGGERING AUTOMATION: {slot.upper()}")
 
     try:
-        # Run the Creation Pipeline (main.py)
-        # We run it as a subprocess to keep memory clean
-        subprocess.run([PYTHON_EXEC, "-m", "core.main", slot], check=True)
+        # 🟢 FIX: Execute main.py directly from the root directory
+        subprocess.run([PYTHON_EXEC, "main.py", slot], check=True)
 
         print(f"✅ [{slot.upper()}] JOB FINISHED.")
 
@@ -25,7 +24,7 @@ def job(slot):
 
 # --- 📅 THE SCHEDULE ---
 # Adjust times as needed
-schedule.every().day.at("09:00").do(job, slot="morning")  # Motivation
+schedule.every().day.at("11:00").do(job, slot="morning")  # Motivation
 schedule.every().day.at("13:00").do(job, slot="noon")  # Space
 schedule.every().day.at("18:00").do(job, slot="evening")  # Nature
 schedule.every().day.at("22:00").do(job, slot="night")  # History
