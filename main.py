@@ -30,8 +30,8 @@ def run_creation_pipeline(slot_name, is_manual=False):
         feedback = ""
         success = False
 
-        for attempt in range(1, 6):
-            print(f"\n🧠 AI is refining your idea (Attempt {attempt}/5)...")
+        for attempt in range(1, 11):
+            print(f"\n🧠 AI is refining your idea (Attempt {attempt}/10)...")
             refined_content = scraper.refine_user_idea(topic, content, feedback)
 
             print("\n✨ --- REFINED IDEA --- ✨")
@@ -57,7 +57,7 @@ def run_creation_pipeline(slot_name, is_manual=False):
                 print("💾 Manual task saved to database!")
                 break
             else:
-                if attempt < 5:
+                if attempt < 11:
                     feedback = input("💬 What should the AI change or improve?: ")
 
         if not success:
@@ -153,15 +153,14 @@ def run_creation_pipeline(slot_name, is_manual=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    # nargs="?" allows the slot to be optional if you just want to run --manual
+
+    # 🟢 NEW: Set default to None. If None, it will calculate the current time slot.
     parser.add_argument(
         "slot",
         nargs="?",
         help="The time slot (morning/noon/evening/night)",
-        default="noon",
+        default=None,
     )
-
-    # 🟢 NEW: The --manual flag
     parser.add_argument(
         "--manual",
         action="store_true",
@@ -169,4 +168,17 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    run_creation_pipeline(args.slot, args.manual)
+    # Determine dynamic slot if none was provided in command line
+    target_slot = args.slot
+    if not target_slot:
+        h = datetime.datetime.now().hour
+        if 5 <= h < 12:
+            target_slot = "morning"
+        elif 12 <= h < 17:
+            target_slot = "noon"
+        elif 17 <= h < 21:
+            target_slot = "evening"
+        else:
+            target_slot = "night"
+
+    run_creation_pipeline(target_slot, args.manual)

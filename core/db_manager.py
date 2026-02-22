@@ -2,7 +2,7 @@ import os
 import re
 import difflib
 import certifi
-from datetime import datetime, timedelta, timezone  # <--- Added timezone import
+from datetime import datetime, timedelta, timezone
 from pymongo import MongoClient
 from dotenv import load_dotenv
 
@@ -17,7 +17,6 @@ class DBManager:
         if not self.uri:
             raise ValueError("❌ Error: MONGO_URI is missing from .env file.")
 
-        # SSL & TIMEOUT FIXES
         self.client = MongoClient(
             self.uri,
             tlsCAFile=certifi.where(),
@@ -45,12 +44,24 @@ class DBManager:
         os.makedirs(full_path, exist_ok=True)
         return full_path
 
-    # 🟢 HYBRID CHECK: URL + FUZZY TITLE + 7-DAY WINDOW
+    # 🟢 NEW: Get a list of niches already processed today
+    def get_used_niches_today(self):
+        # Calculate midnight of the current day in UTC
+        now_utc = datetime.now(timezone.utc)
+        start_of_today = datetime(
+            now_utc.year, now_utc.month, now_utc.day, tzinfo=timezone.utc
+        )
+
+        # Query DB for all tasks created today and extract their 'niche'
+        tasks_today = self.collection.find({"created_at": {"$gte": start_of_today}})
+        used_niches = [task.get("niche") for task in tasks_today if task.get("niche")]
+
+        # Return a set to remove duplicates
+        return set(used_niches)
+
     def task_exists(self, new_title, source_url=None):
-        # 🟢 FIX 1: Use timezone-aware UTC
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=7)
 
-        # CHECK 1: URL MATCH
         if source_url:
             existing_url = self.collection.find_one(
                 {"source_url": source_url, "created_at": {"$gte": cutoff_date}}
@@ -59,7 +70,6 @@ class DBManager:
                 print(f"      🚫 Duplicate URL Found: '{source_url}' (Used recently)")
                 return True
 
-        # CHECK 2: FUZZY TITLE MATCH
         recent_tasks = self.collection.find(
             {"created_at": {"$gte": cutoff_date}}, {"title": 1}
         )
@@ -104,7 +114,6 @@ class DBManager:
             "niche": extra_data.get("niche", "motivation"),
             "slot": slot,
             "folder_path": folder_path,
-            # 🟢 FIX 2: Use timezone-aware UTC here too
             "created_at": datetime.now(timezone.utc),
         }
 

@@ -8,13 +8,36 @@ class VoiceEngine:
     def __init__(self):
         self.db = DBManager()
         
-        # 🟢 NEW: Map Niches to specific, more expressive neural voices
+        # 🟢 UPGRADED: Expanded voice map for all 17 dynamic niches
         self.voice_map = {
-            "motivation": "en-US-ChristopherNeural",  # Energetic, authoritative
-            "space": "en-GB-RyanNeural",              # Documentary, professional
-            "nature": "en-US-AriaNeural",             # Calming, engaging female voice
-            "history": "en-GB-SoniaNeural",           # Classic storyteller female voice
-            "general": "en-US-GuyNeural"              # Standard fallback
+            # Energetic & Authoritative
+            "motivation": "en-US-ChristopherNeural",
+            "sports": "en-US-EricNeural",
+            "gaming": "en-US-SteffanNeural",
+            "entertainment": "en-US-MichelleNeural",
+            
+            # Documentary & Professional (British/Refined)
+            "space": "en-GB-RyanNeural",
+            "history": "en-GB-SoniaNeural",
+            "prehistoric": "en-GB-ThomasNeural",
+            "truecrime": "en-US-AriaNeural",  # Serious, slightly darker tone
+            
+            # Calming & Engaging
+            "nature": "en-US-JennyNeural",
+            "animals": "en-US-AnaNeural",
+            "family": "en-US-AmberNeural",
+            "diy": "en-US-RogerNeural",
+            
+            # News & Informative
+            "worldnews": "en-US-GuyNeural",
+            "finance": "en-US-JasonNeural",
+            "science": "en-US-BrianNeural",
+            "health": "en-US-JaneNeural",
+            "movies": "en-US-TonyNeural",
+            "travel": "en-AU-NatashaNeural", # Australian accent for travel
+            
+            # Fallback
+            "general": "en-US-GuyNeural"
         }
 
     async def generate_audio(self):
@@ -29,7 +52,7 @@ class VoiceEngine:
         # Determine the best voice for this video's emotional tone
         selected_voice = self.voice_map.get(niche, "en-US-GuyNeural")
 
-        print(f"🎙️ Generating Audio ({len(scenes)} segments) using {selected_voice}...")
+        print(f"🎙️ Generating Audio ({len(scenes)} segments) using {selected_voice} for niche '{niche}'...")
 
         updated_scenes = []
         for i, scene in enumerate(scenes):
@@ -53,7 +76,7 @@ class VoiceEngine:
 
                 updated_scenes.append(scene)
                 print(
-                    f"   Seg {i+1}: {duration:.1f}s -> {scene['image_count']} images (~{img_duration:.1f}s each)"
+                    f"   Seg {i+1}: {duration:.1f}s -> {scene['image_count']} visuals (~{img_duration:.1f}s each)"
                 )
 
             except Exception as e:

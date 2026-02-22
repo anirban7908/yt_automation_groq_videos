@@ -1,7 +1,7 @@
 import json
 import re
 import os
-from groq import Groq  # <--- CHANGED
+from groq import Groq
 from core.db_manager import DBManager
 from dotenv import load_dotenv
 
@@ -12,7 +12,7 @@ class ScriptGenerator:
     def __init__(self):
         self.db = DBManager()
         # Initialize Groq Client
-        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))  # <--- CHANGED
+        self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "llama-3.3-70b-versatile"  # Fast, high quality
 
     def repair_json(self, json_str):
@@ -34,50 +34,51 @@ class ScriptGenerator:
         source = task.get("content", "")[:3000]
         source_url = task.get("source_url", "https://news.google.com")
 
-        # PROMPT REMAINS EXACTLY THE SAME AS BEFORE
-        # PROMPT UPDATED FOR HOOK VARIETY AND EPIC CTA VISUALS
+        # 🟢 UPGRADED PROMPT: SEO, Looping, Authenticity, and Advanced CTAs
         prompt = f"""
-            ROLE: Documentary Director.
-            TASK: Convert this news into a structured video script.
+            ROLE: Documentary Director and YouTube SEO Expert.
+            TASK: Convert this news into a structured video script and optimize its discoverability.
             SOURCE: "{source}"
             
             REQUIREMENTS:
-            1. Break the story into 6-8 distinct SCENES.
+            1. **TONE & AUTHENTICITY**: Write the script using a conversational, 'creator' mindset. Use words like "I" and "We" to make it feel like a human is talking to a friend, rather than a robot reading a Wikipedia page.
+            2. Break the story into 6-8 distinct SCENES.
+            3. 'text': The narration for that scene (1-2 sentences).
             
-            2. 'text': The narration for that scene (1-2 sentences).
-            
-            3. **VISUALS**:
+            4. **VISUALS**:
                 - 'keywords': List exactly 2 specific search terms for stock footage.
                 - 'image_count': 1 (slow paced) or 2 (fast paced).
             
-            4.  **METADATA**:
-                - 'title': MUST be "Clickbait" style. High curiosity. 
-                - RULE: Use ALL CAPS for emphasis words. Max 50 chars.
+            5.  **METADATA & SEO (CRITICAL)**:
+                - 'title': MUST be "Clickbait" style. High curiosity. Max 50 chars.
                 - 'description': 3-sentence summary + call to action.
-                - 'hashtags': #Viral #Shorts + 3 niche tags.
+                - 'hashtags': MUST include #Shorts #Viral + AT LEAST 10 to 15 highly specific, SEO-optimized hashtags relevant to the story to maximize algorithmic reach. (e.g., #SpaceX #Astronomy #UniverseFacts).
+                - 'tags': A comma-separated list of 15 to 20 strong, highly searched SEO keywords for the YouTube backend tags box.
                 
-            5. **CRITICAL - KEYWORD RULES (ZERO TOLERANCE)**:
+            6. **CRITICAL - KEYWORD RULES (ZERO TOLERANCE)**:
                 - 'keywords': A list of exactly 2 string search terms.
                 - **NEVER leave this empty.**
                 - **SPECIFICITY**: Use specific names (e.g., "Sony Camera", "Elon Musk").
             
-            6. **CRITICAL - CTA & OUTRO RULES**: 
-                - The FINAL SCENE must be a generic social media Call to Action.
-                - Example text: "Follow us for more {niche} stories and daily discoveries!"
+            7. **CRITICAL - CTA & OUTRO RULES**: 
+                - The FINAL SCENE must drive a specific, high-value algorithmic action (Share, Save, or Comment).
+                - DO NOT ask for likes or subscribes. 
+                - Example for Comments: "What do you think about this? Let me know below!"
+                - Example for Shares/Saves: "Send this to someone who needs to hear it," or "Save this for the next time you..."
                 - **VISUALS FOR CTA**: Do NOT use boring keywords like "laptop", "phone", or "green screen". Keep the visuals EPIC and tied to the {niche}. (e.g., if space, use ["Cinematic Galaxy", "Supernova"]. If motivation, use ["Man reaching summit", "Victory"]).
             
-            7. **NARRATION ('text')**:
-                - Scene 1 MUST be a "Hook". 
+            8. **NARRATION ('text') & LOOPING MECHANIC**:
+                - Scene 1 MUST be a fast, high-energy "Hook" starting immediately with the core value.
                 - **CRITICAL**: DO NOT always use "Stop scrolling". Be creative!
-                - Good Examples: "You won't believe this...", "This changes everything...", "Listen to this...", "What if I told you...", "Scientists are baffled by this..."
-                - Keep sentences punchy and conversational.
+                - **LOOPING MECHANIC (CRITICAL)**: The very last sentence of the script (in the final scene) MUST be written so that it seamlessly flows right back into the first sentence of the hook, creating an infinite loop. 
+                - Example: If the hook starts with "Scientists just found a new planet," the outro should end with "And that is exactly why..."
             
             OUTPUT FORMAT (JSON ONLY):
             {{
                 "title": "Viral Title Here",
                 "description": "Short summary...",
-                "hashtags": "#Tag1 #Tag2",
-                "tags": "tag1, tag2, tag3",
+                "hashtags": "#Tag1 #Tag2 #Tag3...",
+                "tags": "keyword1, keyword2, long tail keyword 3...",
                 "scenes": [
                     {{
                         "text": "Scientists have made a discovery.",
@@ -87,13 +88,13 @@ class ScriptGenerator:
                 ]
             }}
         """
+
         try:
             print(f"🧠 Groq Director: Segmenting {niche.upper()} story...")
 
             # CALL GROQ API
             chat_completion = self.client.chat.completions.create(
                 messages=[
-                    # System prompt ensures it forces JSON mode
                     {
                         "role": "system",
                         "content": "You are a helpful assistant that outputs ONLY valid JSON.",
@@ -101,9 +102,7 @@ class ScriptGenerator:
                     {"role": "user", "content": prompt},
                 ],
                 model=self.model,
-                response_format={
-                    "type": "json_object"
-                },  # Groq supports native JSON mode!
+                response_format={"type": "json_object"},
             )
 
             response_content = chat_completion.choices[0].message.content
@@ -112,20 +111,20 @@ class ScriptGenerator:
             if not data or "scenes" not in data:
                 raise ValueError("Invalid JSON structure from AI")
 
-            # 🟢 Create Metadata File (Same as before)
+            # 🟢 Create Metadata File
             meta_filename = f"metadata_{task['_id']}.txt"
             metadata_content = f"""
-                ===================================================
-                🚀 YOUTUBE UPLOAD METADATA
-                ===================================================
-                📌 TITLE: {data.get('title')}
-                📝 DESCRIPTION: {data.get('description')}
-                👇 Read the full story here: {source_url}
-                ---------------------------------------------------
-                🔥 HASHTAGS: {data.get('hashtags')}
-                🏷️ TAGS: {data.get('tags')}
-                ---------------------------------------------------
-                """
+===================================================
+🚀 YOUTUBE UPLOAD METADATA
+===================================================
+📌 TITLE: {data.get('title')}
+📝 DESCRIPTION: {data.get('description')}
+👇 Read the full story here: {source_url}
+---------------------------------------------------
+🔥 HASHTAGS: {data.get('hashtags')}
+🏷️ TAGS: {data.get('tags')}
+---------------------------------------------------
+"""
             with open(meta_filename, "w", encoding="utf-8") as f:
                 f.write(metadata_content)
 
@@ -143,7 +142,9 @@ class ScriptGenerator:
                     }
                 },
             )
-            print(f"✅ Script Segmented: {len(data['scenes'])} scenes created.")
+            print(
+                f"✅ Script Segmented: {len(data['scenes'])} scenes created with SEO and Looping mechanics."
+            )
 
         except Exception as e:
             print(f"❌ Brain Error: {e}")

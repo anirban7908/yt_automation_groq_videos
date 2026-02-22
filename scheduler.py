@@ -24,10 +24,10 @@ def job(slot):
 
 # --- 📅 THE SCHEDULE ---
 # Adjust times as needed
-schedule.every().day.at("11:00").do(job, slot="morning")  # Motivation
-schedule.every().day.at("13:00").do(job, slot="noon")  # Space
-schedule.every().day.at("18:00").do(job, slot="evening")  # Nature
-schedule.every().day.at("22:00").do(job, slot="night")  # History
+schedule.every().day.at("17:30").do(job, slot="morning")  # Motivation
+schedule.every().day.at("19:30").do(job, slot="noon")  # Space
+schedule.every().day.at("21:30").do(job, slot="evening")  # Nature
+schedule.every().day.at("23:30").do(job, slot="night")  # History
 
 print("===================================================")
 print("🤖 THE KNOWLEDGE SPECTRUM: GROQ AUTOPILOT ENGAGED")
