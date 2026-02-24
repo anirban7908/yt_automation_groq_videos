@@ -1,44 +1,13 @@
 import edge_tts
 import os
-import math
 from mutagen.mp3 import MP3
 from core.db_manager import DBManager
+
 
 class VoiceEngine:
     def __init__(self):
         self.db = DBManager()
-        
-        # 🟢 UPGRADED: Expanded voice map for all 17 dynamic niches
-        self.voice_map = {
-            # Energetic & Authoritative
-            "motivation": "en-US-ChristopherNeural",
-            "sports": "en-US-EricNeural",
-            "gaming": "en-US-SteffanNeural",
-            "entertainment": "en-US-MichelleNeural",
-            
-            # Documentary & Professional (British/Refined)
-            "space": "en-GB-RyanNeural",
-            "history": "en-GB-SoniaNeural",
-            "prehistoric": "en-GB-ThomasNeural",
-            "truecrime": "en-US-AriaNeural",  # Serious, slightly darker tone
-            
-            # Calming & Engaging
-            "nature": "en-US-JennyNeural",
-            "animals": "en-US-AnaNeural",
-            "family": "en-US-AmberNeural",
-            "diy": "en-US-RogerNeural",
-            
-            # News & Informative
-            "worldnews": "en-US-GuyNeural",
-            "finance": "en-US-JasonNeural",
-            "science": "en-US-BrianNeural",
-            "health": "en-US-JaneNeural",
-            "movies": "en-US-TonyNeural",
-            "travel": "en-AU-NatashaNeural", # Australian accent for travel
-            
-            # Fallback
-            "general": "en-US-GuyNeural"
-        }
+        # Removed the redundant self.voice_map since scraper.py handles this now
 
     async def generate_audio(self):
         task = self.db.collection.find_one({"status": "scripted"})
@@ -49,10 +18,12 @@ class VoiceEngine:
         scenes = task.get("script_data", [])
         niche = task.get("niche", "general").lower()
 
-        # Determine the best voice for this video's emotional tone
-        selected_voice = self.voice_map.get(niche, "en-US-GuyNeural")
+        # Determine the best voice for this video's emotional tone from the DB
+        selected_voice = task.get("voice_model", "en-US-GuyNeural")
 
-        print(f"🎙️ Generating Audio ({len(scenes)} segments) using {selected_voice} for niche '{niche}'...")
+        print(
+            f"🎙️ Generating Audio ({len(scenes)} segments) using {selected_voice} for niche '{niche}'..."
+        )
 
         updated_scenes = []
         for i, scene in enumerate(scenes):
@@ -61,7 +32,7 @@ class VoiceEngine:
             text = scene["text"]
 
             try:
-                # 🟢 Apply the dynamically selected voice
+                # 🟢 Apply the dynamically selected voice from the database
                 communicate = edge_tts.Communicate(text, selected_voice, rate="+10%")
                 await communicate.save(path)
 
@@ -70,13 +41,14 @@ class VoiceEngine:
                 scene["audio_path"] = path
                 scene["duration"] = duration
 
-                required_images = math.ceil(duration / 4.0)
-                scene["image_count"] = max(1, int(required_images))
-                img_duration = duration / scene["image_count"]
+                # 🟢 FIX: We no longer override the image_count with math.
+                # We trust the 4 images assigned by brain.py
+                img_count = scene.get("image_count", 4)
+                img_duration = duration / img_count
 
                 updated_scenes.append(scene)
                 print(
-                    f"   Seg {i+1}: {duration:.1f}s -> {scene['image_count']} visuals (~{img_duration:.1f}s each)"
+                    f"   Seg {i+1}: {duration:.1f}s -> {img_count} visuals (~{img_duration:.1f}s each)"
                 )
 
             except Exception as e:

@@ -6,17 +6,20 @@ from moviepy import (
     TextClip,
     CompositeVideoClip,
     ImageClip,
-    VideoFileClip,  # 🟢 NEW: Added VideoFileClip
+    VideoFileClip,
     concatenate_videoclips,
 )
 from core.db_manager import DBManager
 
 FONT_PATH = r"C:\Windows\Fonts\arial.ttf"
 
+# Dynamically find the absolute path to your project root
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+
 class VideoAssembler:
     def __init__(self):
         self.db = DBManager()
-        self.model = whisper.load_model("base")
 
     def assemble(self):
         task = self.db.collection.find_one({"status": "ready_to_assemble"})
@@ -24,40 +27,52 @@ class VideoAssembler:
             return
 
         scenes = task.get("script_data", [])
-        folder = task["folder_path"]
+        folder = os.path.normpath(os.path.join(PROJECT_ROOT, task["folder_path"]))
         video_title = task.get("title", "").upper()
-        print(f"🎞️ Assembling {len(scenes)} segments with dynamic Video/Image handling...")
+        print(f"🎞️ Assembling {len(scenes)} segments with memory optimization...")
 
         final_clips = []
 
         for i, scene in enumerate(scenes):
-            audio_path = scene["audio_path"]
+            audio_path = os.path.normpath(
+                os.path.join(PROJECT_ROOT, scene["audio_path"])
+            )
+
+            if not os.path.exists(audio_path):
+                print(f"⚠️ Missing Audio File: {audio_path} - Skipping scene {i}")
+                continue
+
             audio_clip = AudioFileClip(audio_path)
             duration = audio_clip.duration
-            visual_paths = scene["image_paths"] # Holds both .mp4 and .jpg paths now
+            visual_paths = scene.get("image_paths", [])
+
+            if not visual_paths:
+                continue
+
             img_duration = duration / len(visual_paths)
 
             scene_clips = []
-            for path in visual_paths:
+            for raw_path in visual_paths:
                 try:
-                    # 🟢 NEW: Dynamic File Handling (Video vs Image)
+                    path = os.path.normpath(os.path.join(PROJECT_ROOT, raw_path))
+
+                    if not os.path.exists(path):
+                        print(f"⚠️ Missing Visual File: {path}")
+                        continue
+
                     if path.endswith(".mp4"):
-                        clip = VideoFileClip(path).without_audio()
-                        
-                        # Fix duration: If video is too short, loop it. If too long, trim it.
+                        # 🟢 FIX: Removed the buggy target_resolution that was causing the landscape stretch/memory leak.
+                        # We just load the video without audio to save memory.
+                        clip = VideoFileClip(path, audio=False)
+
                         if clip.duration < img_duration:
                             clip = clip.with_effects([vfx.Loop(duration=img_duration)])
                         else:
                             clip = clip.subclipped(0, img_duration)
                     else:
-                        # Fallback for static images (e.g. Hero Google image or placebolder)
-                        clip = (
-                            ImageClip(path)
-                            .with_duration(img_duration)
-                            .with_effects([vfx.Resize(lambda t: 1 + 0.04 * t)]) # Keep zoom for static images only
-                        )
+                        clip = ImageClip(path).with_duration(img_duration)
 
-                    # 🟢 Standardize Resolution/Crop for YouTube Shorts (1080x1920)
+                    # Standardize Resolution/Crop correctly for 9:16 Shorts
                     clip = clip.resized(height=1920)
                     if clip.w < 1080:
                         clip = clip.resized(width=1080)
@@ -72,9 +87,11 @@ class VideoAssembler:
                     print(f"⚠️ Error processing visual {path}: {e}")
 
             if scene_clips:
-                scene_video = concatenate_videoclips(scene_clips).with_audio(audio_clip)
+                # 🟢 FIX: Reverted to method="chain" to prevent visual glitches between different stock clips
+                scene_video = concatenate_videoclips(
+                    scene_clips, method="chain"
+                ).with_audio(audio_clip)
 
-                # Title Hook logic (Same as before)
                 if i == 0:
                     try:
                         title_clip = (
@@ -99,13 +116,22 @@ class VideoAssembler:
 
                 final_clips.append(scene_video)
 
-        # Combine Scenes & Generate Captions
-        full_video = concatenate_videoclips(final_clips)
-        full_audio_path = os.path.join(folder, "FULL_AUDIO_TEMP.mp3")
-        full_video.audio.write_audiofile(full_audio_path)
+        if not final_clips:
+            print("\n🚨 CRITICAL: No clips were successfully processed!")
+            return
 
+        # Combine Scenes & Generate Captions
+        full_video = concatenate_videoclips(final_clips, method="chain")
+        os.makedirs(folder, exist_ok=True)
+
+        full_audio_path = os.path.join(folder, "FULL_AUDIO_TEMP.mp3")
+        full_video.audio.write_audiofile(full_audio_path, logger=None)
+
+        self.model = whisper.load_model("base")
         print("📝 Generating Captions...")
-        result = self.model.transcribe(full_audio_path, word_timestamps=True)
+        result = self.model.transcribe(
+            full_audio_path, word_timestamps=True, fp16=False
+        )
         caption_clips = []
 
         for segment in result["segments"]:
@@ -131,7 +157,6 @@ class VideoAssembler:
         final_export = CompositeVideoClip(
             [full_video] + caption_clips, size=(1080, 1920)
         )
-
         out_path = os.path.join(folder, "FINAL_VIDEO.mp4")
 
         final_export.write_videofile(
@@ -141,7 +166,7 @@ class VideoAssembler:
             audio_codec="aac",
             bitrate="8000k",
             threads=4,
-            preset="medium",
+            preset="ultrafast",
             logger="bar",
         )
 
@@ -150,3 +175,7 @@ class VideoAssembler:
             {"$set": {"status": "ready_to_upload", "final_video_path": out_path}},
         )
         print(f"🎉 Synchronized Video Ready: {out_path}")
+
+        if os.path.exists(full_audio_path):
+            os.remove(full_audio_path)
+            print("🧹 Cleaned up temporary audio file.")

@@ -105,15 +105,20 @@ class DBManager:
         final_url = source_url if source_url else "https://news.google.com/"
         folder_path = self.get_video_folder(slot, title)
 
+        # 🟢 NEW: Store the visual keywords and prompts
+        # Inside the add_task method in db_manager.py
         task = {
             "title": title,
             "content": content,
             "source": source,
             "status": status,
             "source_url": final_url,
-            "niche": extra_data.get("niche", "motivation"),
+            "niche": extra_data.get("niche", "general"),
             "slot": slot,
             "folder_path": folder_path,
+            # 🟢 NEW: Save the specific voice for this video
+            "voice_model": extra_data.get("voice", "en-US-GuyNeural"),
+            "hashtags": extra_data.get("hashtags", "#Shorts #Viral"),
             "created_at": datetime.now(timezone.utc),
         }
 

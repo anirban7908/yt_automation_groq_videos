@@ -25,29 +25,36 @@ class VisualScout:
         except:
             return False
 
-    # 🟢 NEW: Fetch Actual B-Roll Video from Pexels
+    # 🟢 NEW: Fetch Actual B-Roll Video from Pexels with Aesthetic Modifier
     def use_pexels_video_search(self, query, path):
         if not self.pexels_key:
             return False
-            
+
         print(f"      🎥 Pexels Video Search: hunting for '{query}'...")
         try:
-            # orientation=portrait fetches Shorts-friendly vertical videos
-            url = f"https://api.pexels.com/videos/search?query={query}&per_page=5&orientation=portrait"
-            res = requests.get(url, headers={"Authorization": self.pexels_key}, timeout=10)
-            
+            # We append 'aesthetic' to force higher-quality, cinematic results
+            safe_query = f"{query} aesthetic"
+            url = f"https://api.pexels.com/videos/search?query={safe_query}&per_page=5&orientation=portrait"
+            res = requests.get(
+                url, headers={"Authorization": self.pexels_key}, timeout=10
+            )
+
             if res.status_code == 200 and res.json().get("videos"):
                 videos = res.json()["videos"]
                 if videos:
-                    # Get the first video and find an mp4 file link
                     video_files = videos[0]["video_files"]
-                    mp4_files = [v for v in video_files if v['file_type'] == 'video/mp4']
-                    
+                    mp4_files = [
+                        v for v in video_files if v["file_type"] == "video/mp4"
+                    ]
+
                     if mp4_files:
-                        # Sort to pick a decent resolution without overloading memory (e.g., HD)
-                        mp4_files = sorted(mp4_files, key=lambda x: x.get('width', 0) * x.get('height', 0), reverse=True)
+                        mp4_files = sorted(
+                            mp4_files,
+                            key=lambda x: x.get("width", 0) * x.get("height", 0),
+                            reverse=True,
+                        )
                         video_url = mp4_files[0]["link"]
-                        
+
                         content = requests.get(video_url, timeout=20).content
                         with open(path, "wb") as f:
                             f.write(content)
@@ -55,7 +62,7 @@ class VisualScout:
                         return True
         except Exception as e:
             print(f"      ❌ Pexels Video Search Failed: {e}")
-            
+
         return False
 
     def use_stock_search(self, query, path):
@@ -107,7 +114,9 @@ class VisualScout:
                 for img_url in matches[:3]:
                     try:
                         img_url = img_url.encode().decode("unicode_escape")
-                        img_data = requests.get(img_url, headers=headers, timeout=5).content
+                        img_data = requests.get(
+                            img_url, headers=headers, timeout=5
+                        ).content
                         if self.is_valid_image(img_data):
                             with open(path, "wb") as f:
                                 f.write(img_data)
@@ -166,7 +175,9 @@ class VisualScout:
                 if not saved_path:
                     for fallback_kw in keywords:
                         if fallback_kw != kw:
-                            print(f"      ⚠️ '{kw}' failed. Retrying video with '{fallback_kw}'...")
+                            print(
+                                f"      ⚠️ '{kw}' failed. Retrying video with '{fallback_kw}'..."
+                            )
                             path_mp4 = os.path.join(folder, base_filename + ".mp4")
                             if self.use_pexels_video_search(fallback_kw, path_mp4):
                                 saved_path = path_mp4

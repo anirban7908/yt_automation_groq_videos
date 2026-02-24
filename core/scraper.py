@@ -8,85 +8,225 @@ from groq import Groq
 from core.db_manager import DBManager
 from dotenv import load_dotenv
 
+load_dotenv()
+
 
 class NewsScraper:
     def __init__(self):
         self.db = DBManager()
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "llama-3.3-70b-versatile"
+
+        # self.MASTER_NICHES = {
+        #     "comics": {
+        #         "rss_feeds": [
+        #             "https://www.cbr.com/feed/",
+        #             "https://comicbook.com/feed/",
+        #             "https://bleedingcool.com/feed/",
+        #         ],
+        #         "system_prompt": "You are a hardcore comic book historian and pop-culture expert. Focus on mind-blowing 'Did you know?' facts, hidden easter eggs, or explosive breaking MCU/DCU news. Keep the energy high, use dramatic pauses. Do not sound like a news anchor; sound like a passionate fan explaining a crazy theory to a friend.",
+        #         "visual_keywords": [
+        #             "Superhero",
+        #             "Comic Book",
+        #             "Villain",
+        #             "Cinematic Galaxy",
+        #             "Action Scene",
+        #             "Dark City Alley",
+        #             "Space Station",
+        #             "Magic Energy",
+        #         ],
+        #         "hashtags": "#Marvel #DCComics #MCU #DCU #ComicBooks #Superhero #EasterEggs #Geek",
+        #     },
+        #     "space": {
+        #         "rss_feeds": [
+        #             "https://www.space.com/feeds/all",
+        #             "https://universetoday.com/feed",
+        #             "https://phys.org/rss-feed/space-news/",
+        #         ],
+        #         "system_prompt": "You are an existential astrophysicist. Focus on the terrifying, mind-bending scale of the universe, new planetary discoveries, or black holes. Speak with a sense of awe, existential dread, and wonder. Make the viewer feel tiny but fascinated.",
+        #         "visual_keywords": [
+        #             "Cinematic Galaxy",
+        #             "Deep Space",
+        #             "Black Hole",
+        #             "Astronaut",
+        #             "Mars Surface",
+        #             "Telescope",
+        #             "Supernova",
+        #             "Night Sky Stars",
+        #         ],
+        #         "hashtags": "#Space #Astronomy #Universe #BlackHole #NASA #Cosmos #Astrophysics",
+        #     },
+        #     "prehistoric": {
+        #         "rss_feeds": [
+        #             "https://www.sciencedaily.com/rss/fossils_ruins/paleontology.xml",
+        #             "https://phys.org/rss-feed/earth-news/paleontology/",
+        #         ],
+        #         "system_prompt": "You are a rugged paleontologist. Focus on terrifying apex predators, giant ancient beasts, or the harsh reality of prehistoric Earth. Make the ancient world sound dangerous, bloody, and fascinating. Use words that evoke scale and terror.",
+        #         "visual_keywords": [
+        #             "Dinosaur",
+        #             "Fossil",
+        #             "Jungle",
+        #             "Volcano Eruption",
+        #             "Ancient Forest",
+        #             "Reptile Eye",
+        #             "Bones",
+        #             "Meteor Strike",
+        #         ],
+        #         "hashtags": "#Dinosaurs #Paleontology #Prehistoric #AncientEarth #Fossils #History",
+        #     },
+        #     "mysteries": {
+        #         "rss_feeds": [
+        #             "https://www.coasttocoastam.com/rss/",
+        #             "https://www.ancient-origins.net/rss.xml",
+        #         ],
+        #         "system_prompt": "You are a suspenseful investigative journalist investigating the paranormal, cryptids, and unsolved mysteries. Speak in hushed, conspiratorial tones. Ask unsettling questions. Leave the viewer questioning what is real.",
+        #         "visual_keywords": [
+        #             "Foggy Forest",
+        #             "Dark Ocean",
+        #             "Classified Document",
+        #             "Shadowy Figure",
+        #             "Abandoned Cabin",
+        #             "UFO",
+        #             "Creepy Cave",
+        #             "Night Vision",
+        #         ],
+        #         "hashtags": "#Mystery #Unsolved #Paranormal #Cryptid #Conspiracy #Creepy",
+        #     },
+        #     "tech_ai": {
+        #         "rss_feeds": [
+        #             "https://www.theverge.com/rss/index.xml",
+        #             "https://techcrunch.com/feed/",
+        #         ],
+        #         "system_prompt": "You are a cyberpunk hacker and AI analyst. Focus on slightly dystopian, mind-blowing technological breakthroughs. Discuss robots taking jobs, brain chips, or AI becoming sentient. Sound urgent and slightly warning.",
+        #         "visual_keywords": [
+        #             "Robot",
+        #             "Matrix Code",
+        #             "Cyberpunk City",
+        #             "Server Room",
+        #             "Artificial Intelligence",
+        #             "Neon Lights",
+        #             "Hacker Screen",
+        #             "Microchip",
+        #         ],
+        #         "hashtags": "#AI #ArtificialIntelligence #Cyberpunk #TechNews #FutureTech #Robotics",
+        #     },
+        #     "psychology": {
+        #         "rss_feeds": [
+        #             "https://www.psychologytoday.com/us/front/feed",
+        #             "https://www.sciencedaily.com/rss/mind_brain/psychology.xml",
+        #         ],
+        #         "system_prompt": "You are an ex-FBI profiler and dark psychology expert. Teach the viewer how to read body language, spot liars, or understand human manipulation. Be direct, authoritative, and slightly intimidating.",
+        #         "visual_keywords": [
+        #             "Intense Eye Contact",
+        #             "Brain Scan",
+        #             "Shadowy Silhouette",
+        #             "Two People Talking",
+        #             "Magnifying Glass",
+        #             "Clock Ticking",
+        #             "Chess Board",
+        #         ],
+        #         "hashtags": "#Psychology #BodyLanguage #DarkPsychology #MindTricks #Manipulation #MentalHealth",
+        #     },
+        #     "geography": {
+        #         "rss_feeds": [
+        #             "https://www.nationalgeographic.com/latest-stories/rss",
+        #             "https://www.atlasobscura.com/feeds/latest",
+        #         ],
+        #         "system_prompt": "You are a daring explorer uncovering forbidden and bizarre places on Earth. Focus on places people are not allowed to go, bizarre weather anomalies, or deadly locations. Sound adventurous and cautionary.",
+        #         "visual_keywords": [
+        #             "Abandoned City",
+        #             "Storm Clouds",
+        #             "Top Secret Fence",
+        #             "Desert Island",
+        #             "Deep Cave",
+        #             "Glacier",
+        #             "Ruins",
+        #             "Toxic Waste",
+        #         ],
+        #         "hashtags": "#Geography #HiddenPlaces #AtlasObscura #Forbidden #TravelFacts",
+        #     },
+        # }
+
         self.MASTER_NICHES = {
-            "entertainment": [
-                "https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml",
-                "https://www.eonline.com/syndication/feeds/rssfeeds/topstories.xml",
-                "https://www.hollywoodreporter.com/feed/",
-                "https://www.tmz.com/rss.xml",
-            ],
-            "gaming": [
-                "https://feeds.ign.com/ign/all",
-                "https://www.polygon.com/rss/index.xml",
-                "https://kotaku.com/rss",
-                "https://www.pcgamer.com/rss/",
-            ],
-            "sports": [
-                "https://www.espn.com/espn/rss/news",
-                "https://api.foxsports.com/v2/content/optimized-rss?partnerKey=MB0Wehpmuj2lUhuRhQaafhBjAJqaPU244mlTDK1i&size=30&tags=fs/mlb",
-                "https://www.cbssports.com/rss/headlines/",
-                "https://sports.yahoo.com/rss/",
-            ],
-            "animals": [
-                "https://www.sciencedaily.com/rss/plants_animals/dogs.xml",
-                "https://www.nationalgeographic.com/animals/rss",
-                "https://news.mongabay.com/feed/",
-                "https://www.treehugger.com/feed",
-            ],
-            "movies": [
-                "https://variety.com/feed/",
-                "https://screenrant.com/feed/",
-                "https://www.indiewire.com/feed/",
-                "https://www.cinemablend.com/rss",
-            ],
-            "science": [
-                "https://www.theverge.com/rss/index.xml",
-                "https://techcrunch.com/feed/",
-                "https://www.livescience.com/home/feed/about.xml",
-                "https://phys.org/rss-feed/",
-            ],
-            "worldnews": [
-                "http://feeds.bbci.co.uk/news/world/rss.xml",
-                "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-                "https://www.aljazeera.com/xml/rss/all.xml",
-                "https://feeds.npr.org/1004/rss.xml",
-            ],
-            "finance": [
-                "https://search.cnbc.com/rs/search/combinedcms/view.xml?id=10000664",
-                "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
-                "https://finance.yahoo.com/news/rssindex",
-                "http://feeds.marketwatch.com/marketwatch/topstories/",
-            ],
-            "health": [
-                "https://www.sciencedaily.com/rss/health_medicine/fitness.xml",
-                "https://www.health.harvard.edu/blog/feed",
-                "https://rssfeeds.webmd.com/rss/rss.aspx?RSSSource=RSS_PUBLIC",
-                "https://newsnetwork.mayoclinic.org/feed/",
-            ],
-            "travel": [
-                "https://www.cntraveler.com/feed/rss",
-                "https://www.lonelyplanet.com/articles/feed",
-                "https://thepointsguy.com/feed/",
-                "https://www.nomadicmatt.com/travel-blogs/feed/",
-            ],
-            "truecrime": [
-                "https://www.oxygen.com/crime-news/feed",
-                "https://www.cbsnews.com/latest/rss/48hours",
-                "https://www.crimeonline.com/feed/",
-                "https://www.fbi.gov/feeds/national-press-releases/rss.xml",
-            ],
-            "history": [
-                "https://www.history.com/.rss/excerpt/news",
-                "https://www.smithsonianmag.com/rss/history/",
-                "https://www.ancient-origins.net/rss.xml",
-                "https://www.archaeology.org/news?format=feed",
-            ],
+            "comics": {
+                "rss_feeds": [
+                    "https://www.cbr.com/feed/",
+                    "https://comicbook.com/feed/",
+                    "https://bleedingcool.com/feed/",
+                    "https://www.superherohype.com/feed",
+                    "http://feeds.ign.com/ign/comics-articles",
+                    "https://www.darkhorizons.com/feed/",
+                ],
+                "hashtags": "#Marvel #DCComics #MCU #DCU #ComicBooks #Superhero #EasterEggs #Geek",
+                "voice": "en-US-EricNeural",  # Energetic, upbeat male
+            },
+            "space": {
+                "rss_feeds": [
+                    "https://www.space.com/feeds/all",
+                    "https://universetoday.com/feed",
+                    "https://phys.org/rss-feed/space-news/",
+                    "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+                    "https://spacenews.com/feed/",
+                    "https://www.esa.int/rssfeed/Our_Activities/Space_News",
+                ],
+                "hashtags": "#Space #Astronomy #Universe #BlackHole #NASA #Cosmos #Astrophysics",
+                "voice": "en-GB-RyanNeural",  # Classic British documentary narrator
+            },
+            "prehistoric": {
+                "rss_feeds": [
+                    "https://www.sciencedaily.com/rss/fossils_ruins/paleontology.xml",
+                    "https://phys.org/rss-feed/earth-news/paleontology/",
+                    "https://blog.everythingdinosaur.com/feed/",
+                    "https://www.livescience.com/planet-earth/rss",
+                    "https://www.nature.com/subjects/paleontology.rss",
+                ],
+                "hashtags": "#Dinosaurs #Paleontology #Prehistoric #AncientEarth #Fossils #History",
+                "voice": "en-US-SteffanNeural",  # Rugged, authoritative male
+            },
+            "mysteries": {
+                "rss_feeds": [
+                    "https://www.coasttocoastam.com/rss/",
+                    "https://www.ancient-origins.net/rss.xml",
+                    "https://www.unexplained-mysteries.com/rss/news.xml",
+                    "https://mysteriousuniverse.org/feed/",
+                    "https://anomalien.com/feed/",
+                ],
+                "hashtags": "#Mystery #Unsolved #Paranormal #Cryptid #Conspiracy #Creepy",
+                "voice": "en-US-ChristopherNeural",  # Deep, serious, suspenseful
+            },
+            "tech_ai": {
+                "rss_feeds": [
+                    "https://www.theverge.com/rss/index.xml",
+                    "https://techcrunch.com/feed/",
+                    "https://venturebeat.com/category/ai/feed/",
+                    "https://www.artificialintelligence-news.com/feed/",
+                    "https://www.wired.com/feed/tag/ai/latest/rss",
+                ],
+                "hashtags": "#AI #ArtificialIntelligence #Cyberpunk #TechNews #FutureTech #Robotics",
+                "voice": "en-US-GuyNeural",  # Standard, clear news voice
+            },
+            "psychology": {
+                "rss_feeds": [
+                    "https://www.psychologytoday.com/us/front/feed",
+                    "https://www.sciencedaily.com/rss/mind_brain/psychology.xml",
+                    "https://www.psypost.org/feed/",
+                    "https://neurosciencenews.com/neuroscience-topics/psychology/feed/",
+                    "https://digest.bps.org.uk/feed/",
+                ],
+                "hashtags": "#Psychology #BodyLanguage #DarkPsychology #MindTricks #Manipulation #MentalHealth",
+                "voice": "en-US-BrianNeural",  # Analytical, calm
+            },
+            "geography": {
+                "rss_feeds": [
+                    "https://www.nationalgeographic.com/latest-stories/rss",
+                    "https://www.atlasobscura.com/feeds/latest",
+                    "https://www.earth.com/feed/",
+                    "https://www.smithsonianmag.com/rss/travel/",
+                    "https://geoawesomeness.com/feed/",
+                ],
+                "hashtags": "#Geography #HiddenPlaces #AtlasObscura #Forbidden #TravelFacts",
+                "voice": "en-AU-WilliamNeural",  # Australian explorer vibe
+            },
         }
 
     def get_time_slot(self):
@@ -101,9 +241,7 @@ class NewsScraper:
             return "night"
 
     def fetch_rss(self, url):
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-        }
+        headers = {"User-Agent": "Mozilla/5.0"}
         try:
             print(f"      🔗 Fetching: {url}")
             r = requests.get(url, headers=headers, timeout=15)
@@ -112,98 +250,22 @@ class NewsScraper:
                 if entries:
                     print(f"         ✅ Found {len(entries)} articles.")
                     return entries
-                else:
-                    print("         ⚠️ Feed loaded, but no articles found inside.")
-            else:
-                print(
-                    f"         ⛔ HTTP Error {r.status_code}: Website blocked the request."
-                )
-        except requests.exceptions.Timeout:
-            print("         ⏱️ Connection timed out (took longer than 15s).")
-        except Exception as e:
-            print(f"         ❌ Request Failed: {e}")
+        except:
+            pass
         return []
 
-    # ... (Keep pick_viral_topic, pick_top_3_viral_topics, and refine_user_idea EXACTLY the same as before) ...
-    def pick_viral_topic(self, candidates, niche):
-        """
-        Uses Groq (Cloud AI) to analyze titles and pick the most click-worthy one.
-        """
-        titles = [f"{i}. {c['title']}" for i, c in enumerate(candidates)]
-        titles_text = "\n".join(titles)
-
-        prompt = f"""
-        TASK: You are a YouTube Viral Content Strategist.
-        GOAL: Pick the ONE headline from the list below that has the highest potential to go VIRAL as a YouTube Short.
-        NICHE: {niche}
-        
-        CRITERIA:
-        1. Look for shock value, curiosity gaps, or major breakthroughs.
-        2. Avoid boring, generic, or corporate announcements.
-        
-        HEADLINES:
-        {titles_text}
-        
-        OUTPUT FORMAT: Return ONLY the index number (integer) of the best headline. Example: 5
-        """
-
-        try:
-            print(
-                f"   🤖 Groq Judge: Analyzing {len(candidates)} headlines for virality..."
-            )
-
-            # CALL GROQ API INSTEAD OF OLLAMA
-            chat_completion = self.client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model=self.model,
-            )
-
-            content = chat_completion.choices[0].message.content.strip()
-            match = re.search(r"\d+", content)
-
-            if match:
-                index = int(match.group())
-                if 0 <= index < len(candidates):
-                    print(
-                        f"      🏆 AI Selected: '{candidates[index]['title'][:40]}...'"
-                    )
-                    return candidates[index]
-
-            print("      ⚠️ AI failed to return a valid number. Picking random.")
-            return random.choice(candidates)
-
-        except Exception as e:
-            print(f"      ❌ Groq Error: {e}. Fallback to random.")
-            return random.choice(candidates)
-
     def pick_top_3_viral_topics(self, candidates, niche):
-        """
-        Uses Groq (Cloud AI) to analyze titles and pick the TOP 3 click-worthy ones.
-        """
         titles = [f"{i}. {c['title']}" for i, c in enumerate(candidates)]
         titles_text = "\n".join(titles)
 
         prompt = f"""
-        TASK: You are a YouTube Viral Content Strategist.
-        GOAL: Pick the THREE best headlines from the list below that have the highest potential to go VIRAL as YouTube Shorts.
+        TASK: Pick THREE headlines that have the highest potential to go VIRAL as YouTube Shorts.
         NICHE: {niche}
-        
-        CRITERIA:
-        1. Look for shock value, curiosity gaps, or major breakthroughs.
-        2. Avoid boring, generic, or corporate announcements.
-        
         HEADLINES:
         {titles_text}
-        
-        OUTPUT FORMAT: Return ONLY a JSON dictionary with a key "indices" containing an array of exactly 3 integer indices of the best headlines. 
-        Example: {{"indices": [5, 12, 2]}}
+        OUTPUT FORMAT: Return ONLY a JSON dictionary with a key "indices" containing exactly 3 integer indices. Example: {{"indices": [5, 12, 2]}}
         """
-
         try:
-            print(
-                f"   🤖 Groq Judge: Analyzing {len(candidates)} headlines for the Top 3..."
-            )
-
             chat_completion = self.client.chat.completions.create(
                 messages=[
                     {
@@ -215,84 +277,40 @@ class NewsScraper:
                 model=self.model,
                 response_format={"type": "json_object"},
             )
-
-            content = chat_completion.choices[0].message.content.strip()
-
             import json
 
-            response_data = json.loads(content)
+            response_data = json.loads(
+                chat_completion.choices[0].message.content.strip()
+            )
             indices = response_data.get("indices", [])
-
-            top_3_candidates = []
-            for index in indices[:3]:
-                if isinstance(index, int) and 0 <= index < len(candidates):
-                    top_3_candidates.append(candidates[index])
-
-            print(f"      🏆 AI Selected 3 Potential Winners.")
-            return top_3_candidates
-
-        except Exception as e:
-            print(f"      ❌ Groq Error: {e}. Fallback to random 3.")
-            import random
-
+            return [
+                candidates[i]
+                for i in indices[:3]
+                if isinstance(i, int) and 0 <= i < len(candidates)
+            ]
+        except:
             return random.sample(candidates, min(3, len(candidates)))
 
-    def refine_user_idea(self, topic, content, feedback=""):
-        prompt = f"""
-        TASK: You are a YouTube Viral Content Strategist.
-        The user has provided a raw idea for a video. Refine it into a highly engaging, viral-ready story summary (about 3-5 sentences) that can be easily turned into a script.
-        
-        RAW TOPIC: {topic}
-        RAW CONTENT: {content}
-        USER FEEDBACK ON PREVIOUS ATTEMPT (if any): {feedback}
-        
-        CRITERIA:
-        1. Make it sound dramatic, interesting, and tailored for YouTube Shorts.
-        2. Do NOT write the actual script scenes yet (the Brain module will do that later).
-        3. Return ONLY the refined summary. No conversational filler.
-        """
-
-        try:
-            chat_completion = self.client.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model=self.model,
-            )
-            return chat_completion.choices[0].message.content.strip()
-        except Exception as e:
-            print(f"❌ AI Refinement Error: {e}")
-            return content
-
-    # 🟢 NEW: Dynamic Random Niche Engine
-    # 🟢 OPTIMIZED: The 4-Attempt Loop with Top 3 Batch Checking (Cleaned Imports)
     def scrape_targeted_niche(self, forced_slot=None):
         slot = forced_slot if forced_slot else self.get_time_slot()
-
-        print(f"🕵️‍♂️ Checking used niches for today...")
         used_niches = self.db.get_used_niches_today()
         all_niches = set(self.MASTER_NICHES.keys())
 
-        # Find which niches haven't been generated today
         available_niches = list(all_niches - used_niches)
-
         if not available_niches:
-            print(
-                "❌ All 15 niches have been generated today! Resetting pool to allow duplicates..."
-            )
             available_niches = list(all_niches)
 
-        # Select a random unique niche for this run
         selected_niche = random.choice(available_niches)
-        sources = self.MASTER_NICHES[selected_niche]
+        niche_data = self.MASTER_NICHES[selected_niche]
+        sources = niche_data["rss_feeds"]
 
         print(
             f"🎯 Dynamic Strategy Active: Selected '{selected_niche.upper()}' for {slot.upper()} slot."
         )
 
-        # Step 1: Gather raw candidates without checking the DB yet!
         candidates = []
         for url in sources:
-            entries = self.fetch_rss(url)
-            for e in entries:
+            for e in self.fetch_rss(url):
                 if hasattr(e, "title"):
                     candidates.append(
                         {
@@ -304,53 +322,38 @@ class NewsScraper:
                     )
 
         if not candidates:
-            print("❌ No articles found in RSS feeds. Scraper will exit.")
             return
 
-        # Step 2: The Optimized Retry Loop
-        attempts = 0
-        max_tries = 4
-
+        attempts, max_tries = 0, 4
         while attempts < max_tries and len(candidates) >= 3:
-            print(f"   🔄 Attempt {attempts + 1}/{max_tries} (Batch of 3)...")
             top_3 = self.pick_top_3_viral_topics(candidates, selected_niche)
+            unique_winners = [
+                c for c in top_3 if not self.db.task_exists(c["title"], c["link"])
+            ]
 
-            unique_winners = []
-            for candidate in top_3:
-                is_duplicate = self.db.task_exists(
-                    candidate["title"], candidate["link"]
-                )
-                if not is_duplicate:
-                    unique_winners.append(candidate)
-                if candidate in candidates:
-                    candidates.remove(candidate)
+            for c in top_3:
+                if c in candidates:
+                    candidates.remove(c)
 
             if unique_winners:
-                # 🟢 FIX: Removed the 'import random' from here!
                 final_winner = random.choice(unique_winners)
                 print(
                     f"      🎉 Unique Topic Secured: '{final_winner['title'][:40]}...'"
                 )
 
                 self.db.add_task(
-                    final_winner["title"],
-                    final_winner["summary"],
-                    f"{selected_niche.upper()}",
-                    "pending",
-                    {
+                    title=final_winner["title"],
+                    content=final_winner["summary"],
+                    source=f"{selected_niche.upper()}",
+                    status="pending",
+                    extra_data={
                         "niche": selected_niche,
                         "niche_slot": slot,
                         "source_url": final_winner["link"],
+                        # 🟢 FIX: Removed the hardcoded system_prompts because brain.py generates them dynamically now!
+                        "hashtags": niche_data.get("hashtags", "#Shorts #Viral"),
                     },
                 )
                 return
-            else:
-                print(
-                    "      ⚠️ All 3 AI choices were DB duplicates. Retrying with remaining pool..."
-                )
-
             attempts += 1
-
-        print(
-            "❌ Exceeded max retries. Could not find a unique viral topic for this niche."
-        )
+        print("❌ Could not find a unique viral topic.")
