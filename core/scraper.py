@@ -7,6 +7,7 @@ import os
 from groq import Groq
 from core.db_manager import DBManager
 from dotenv import load_dotenv
+from bs4 import BeautifulSoup
 
 load_dotenv()
 
@@ -28,7 +29,7 @@ class NewsScraper:
                     "https://www.darkhorizons.com/feed/",
                 ],
                 "hashtags": "#Marvel #DCComics #MCU #DCU #ComicBooks #Superhero #EasterEggs #Geek",
-                "voice": "en-US-EricNeural",  # Energetic, upbeat male
+                "voice": "en-US-EricNeural",
             },
             "space": {
                 "rss_feeds": [
@@ -40,7 +41,7 @@ class NewsScraper:
                     "https://www.esa.int/rssfeed/Our_Activities/Space_News",
                 ],
                 "hashtags": "#Space #Astronomy #Universe #BlackHole #NASA #Cosmos #Astrophysics",
-                "voice": "en-GB-RyanNeural",  # Classic British documentary narrator
+                "voice": "en-GB-RyanNeural",
             },
             "mysteries": {
                 "rss_feeds": [
@@ -51,7 +52,7 @@ class NewsScraper:
                     "https://anomalien.com/feed/",
                 ],
                 "hashtags": "#Mystery #Unsolved #Paranormal #Cryptid #Conspiracy #Creepy",
-                "voice": "en-US-ChristopherNeural",  # Deep, serious, suspenseful
+                "voice": "en-US-ChristopherNeural",
             },
             "tech_ai": {
                 "rss_feeds": [
@@ -62,7 +63,7 @@ class NewsScraper:
                     "https://www.wired.com/feed/tag/ai/latest/rss",
                 ],
                 "hashtags": "#AI #ArtificialIntelligence #Cyberpunk #TechNews #FutureTech #Robotics",
-                "voice": "en-US-GuyNeural",  # Standard, clear news voice
+                "voice": "en-US-GuyNeural",
             },
             "psychology": {
                 "rss_feeds": [
@@ -73,7 +74,7 @@ class NewsScraper:
                     "https://digest.bps.org.uk/feed/",
                 ],
                 "hashtags": "#Psychology #BodyLanguage #DarkPsychology #MindTricks #Manipulation #MentalHealth",
-                "voice": "en-US-BrianNeural",  # Analytical, calm
+                "voice": "en-US-BrianNeural",
             },
             "geography": {
                 "rss_feeds": [
@@ -84,7 +85,7 @@ class NewsScraper:
                     "https://geoawesomeness.com/feed/",
                 ],
                 "hashtags": "#Geography #HiddenPlaces #AtlasObscura #Forbidden #TravelFacts",
-                "voice": "en-AU-WilliamNeural",  # Australian explorer vibe
+                "voice": "en-AU-WilliamNeural",
             },
             "worldnews": {
                 "rss_feeds": [
@@ -95,7 +96,7 @@ class NewsScraper:
                     "https://yahoo.com/news/rss/world",
                 ],
                 "hashtags": "#WorldNews #GlobalNews #BreakingNews #CurrentEvents #Geopolitics #NewsUpdate",
-                "voice": "en-US-SteffanNeural",  # Authoritative, professional news anchor
+                "voice": "en-US-SteffanNeural",
             },
         }
 
@@ -135,8 +136,14 @@ class NewsScraper:
         prompt = f"""
         TASK: Pick THREE headlines that have the highest potential to go VIRAL as YouTube Shorts.
         NICHE: {niche}
+        
+        CRITICAL RULES: 
+        1. Only select FACTUAL, INFORMATIVE, or MYSTERIOUS topics (e.g., scientific discoveries, historical events, weird geography).
+        2. DO NOT pick opinion pieces, travel diaries, personal interviews, or motivational stories.
+        
         HEADLINES:
         {titles_text}
+        
         OUTPUT FORMAT: Return ONLY a JSON dictionary with a key "indices" containing exactly 3 integer indices. Example: {{"indices": [5, 12, 2]}}
         """
         try:
@@ -164,6 +171,27 @@ class NewsScraper:
             ]
         except:
             return random.sample(candidates, min(3, len(candidates)))
+
+    def extract_full_article(self, url):
+        """Visits the webpage and extracts all paragraph text."""
+        print(f"      📖 Deep Reading full article from: {url}")
+        try:
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }
+            res = requests.get(url, headers=headers, timeout=10)
+            soup = BeautifulSoup(res.text, "html.parser")
+
+            paragraphs = soup.find_all("p")
+            full_text = " ".join([p.get_text() for p in paragraphs])
+
+            if len(full_text) < 200:
+                return None
+
+            return full_text[:5000]
+        except Exception as e:
+            print(f"      ❌ Failed to read full article: {e}")
+            return None
 
     def scrape_targeted_niche(self, forced_slot=None):
         slot = forced_slot if forced_slot else self.get_time_slot()
@@ -215,17 +243,26 @@ class NewsScraper:
                     f"      🎉 Unique Topic Secured: '{final_winner['title'][:40]}...'"
                 )
 
+                full_content = self.extract_full_article(final_winner["link"])
+                if not full_content:
+                    print("      ⚠️ Deep Read failed, falling back to RSS summary.")
+                    raw_summary = final_winner["summary"]
+                    import re
+
+                    clean_summary = re.sub(r"<[^>]+>", "", raw_summary)
+                    full_content = clean_summary[:5000]
+
                 self.db.add_task(
                     title=final_winner["title"],
-                    content=final_winner["summary"],
+                    content=full_content,
                     source=f"{selected_niche.upper()}",
                     status="pending",
                     extra_data={
                         "niche": selected_niche,
                         "niche_slot": slot,
                         "source_url": final_winner["link"],
-                        # 🟢 FIX: Removed the hardcoded system_prompts because brain.py generates them dynamically now!
                         "hashtags": niche_data.get("hashtags", "#Shorts #Viral"),
+                        "voice": niche_data.get("voice", "en-US-GuyNeural"),
                     },
                 )
                 return

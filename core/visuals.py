@@ -141,7 +141,9 @@ class VisualScout:
         updated_scenes = []
 
         for i, scene in enumerate(scenes):
-            keywords = scene.get("keywords", ["nature"])
+            # 🟢 THE FIX: If the AI drops the keywords, fallback to the video's actual title!
+            video_title_fallback = task.get("title", "Breaking News")
+            keywords = scene.get("keywords", [video_title_fallback])
             count = scene.get("image_count", 1)
 
             visual_paths = []

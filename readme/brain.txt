@@ -3,27 +3,29 @@ YOUTUBE AUTOMATION PROJECT - MODULE DOCUMENTATION
 File: core/brain.py
 
 1. What it does?
-This file is the "Creative Director" and "Scriptwriter" of your automation pipeline. It takes the raw news stories found by the scraper and uses Artificial Intelligence (AI) to transform them into professional, viral-ready video scripts.
-Key Upgrade: This file now utilizes "Meta-Prompting". Before writing the script, the AI acts as a Strategist to invent a custom persona (e.g., a "cyberpunk hacker") and a tailored visual inspiration board based entirely on the specific news article. It then uses those dynamic rules to write a script with dynamic visual pacing (1 to 3 images per scene) to prevent duplicate stock footage and keep the viewer engaged.
+This file is the "Creative Director" and "Scriptwriter" of your automation pipeline. It takes the raw, 5,000-character factual text from the Scraper and uses Artificial Intelligence (Groq) to transform it into a professional, highly engaging video script.
+Key Upgrade: This file now features "Dynamic Persona Mapping". Instead of sounding exactly the same every time, the AI checks the video's niche and completely changes its personality. It acts like an energetic geek for comics, a serious investigative narrator for mysteries, or an objective anchor for world news. It also forces the script to be educational, strictly factual (no personal diary fluff), and broken down into simple terms for a general audience.
 
 2. What are the libraries used?
-* json: A built-in Python library for parsing and generating JSON data. Used to convert the AI's strict JSON response into a usable Python dictionary.
-* re (Regular Expressions): A powerful tool for matching patterns in text. Used in the `repair_json` function to strip away extra AI "chatter" and extract only the valid JSON block.
-* groq: The official Groq API client. Replaces the old local Ollama integration to provide cloud-based, high-speed Llama 3.3 reasoning for script generation.
-* os & dotenv: Used to securely load your hidden API keys (GROQ_API_KEY) from your local .env file.
-* core.db_manager.DBManager: Your custom database class. Used to fetch tasks waiting in the "pending" state and update them to the "scripted" state.
+* json: A built-in Python library used to parse the strict JSON data returned by the AI into a usable Python dictionary.
+* re (Regular Expressions): A powerful text manipulation tool. Used in the `repair_json` function to strip away any extra "chatter" the AI might output (like "Here is your code: ") so the script doesn't crash.
+* os & dotenv: Standard libraries used to securely load your hidden API keys (GROQ_API_KEY) from your local `.env` file so they aren't exposed in your code.
+* groq: The official Groq API client. This is the engine that connects to the cloud-based "llama-3.3-70b-versatile" model for lightning-fast reasoning and writing.
+* core.db_manager.DBManager: Your custom database handler. Used to fetch tasks waiting in the "pending" state and update them to the "scripted" state once the AI finishes writing.
 
 3. Which is the main function and what does it do?
-Main Function: `generate_script(self)`
+Main Function: generate_script(self)
 This is the core logic that produces the video blueprint:
   1. Fetching: Looks in the database for a task where status is "pending".
-  2. Meta-Prompting: Calls `generate_meta_prompt` to dynamically invent a persona and visual keywords based on the news story.
-  3. Prompting: Constructs a massive, highly detailed prompt acting as a Director, feeding the AI the dynamic persona, the raw news, and strict rules for voiceover punctuation and pacing.
-  4. Generating: Calls the Groq API, forcing it to return a structured JSON response containing the scenes, narration, and unique search keywords.
-  5. Cleaning & Formatting: Uses `repair_json` to ensure the output is valid code, and specifically formats the SEO tags from an array back into a comma-separated string for YouTube compatibility.
-  6. Saving: Updates the database record with the new script data and changes the status to "scripted".
+  2. Role Assignment: Calls the new `get_expert_role` function to determine exactly who the AI needs to pretend to be for this specific niche.
+  3. Meta-Prompting: Calls `generate_meta_prompt` to dynamically invent a custom 3-sentence persona and 10 highly specific visual keywords (the Inspiration Board).
+  4. Prompting: Constructs the massive Director prompt. It feeds the AI the dynamic persona, the raw news text, and strict rules for voiceover punctuation, factual reporting, and visual pacing.
+  5. Generating: Calls the Groq API, forcing it to return a structured JSON response containing the scenes, narration, and unique search keywords.
+  6. Cleaning & Formatting: Uses `repair_json` to ensure the output is valid, saves a local text file with the metadata, and formats the SEO tags into a comma-separated string.
+  7. Saving: Updates the database record with the new script data and changes the status to "scripted".
 
 4. Helper Functions & Key Variables
-* generate_meta_prompt(self, niche, source_text): The new AI Strategist. It reads the news first and outputs a strict 3-sentence persona and 10 highly specific visual keywords to guide the main script generation.
-* repair_json(self, json_str): A safety mechanism to fix messy AI output. It uses regex to remove text before the first `{` and after the last `}`.
-* The Prompt Requirements: The instruction manual for the AI. It explicitly commands the AI to use heavy punctuation (commas, dashes) so the Text-to-Speech engine breathes naturally. It also enforces "Dynamic Pacing", forcing the AI to choose exactly 1, 2, or 3 unique stock footage searches based on how long the spoken sentence is.
+* get_expert_role(self, niche): The Persona Dictionary. It looks at the niche (e.g., "space") and returns a highly specific instruction string (e.g., "authoritative science and astronomy communicator") to instantly change the AI's writing style.
+* generate_meta_prompt(self, niche, source_text, expert_role): The AI Strategist. It reads the news first and outputs the persona and visual keywords to guide the main script generation.
+* repair_json(self, json_str): A safety net. It uses regex (`re.sub`) to remove text before the first `{` and after the last `}` to guarantee perfect JSON parsing.
+* The Prompt Requirements: The master instruction manual for the AI. It strictly forbids "motivational fluff" and "I statements", forcing the AI to extract only hard facts. It also enforces "Dynamic Pacing", telling the AI to choose exactly 1, 2, or 3 unique stock footage search terms based on how long each spoken sentence is.

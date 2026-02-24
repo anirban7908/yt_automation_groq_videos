@@ -14,6 +14,18 @@ class ScriptGenerator:
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "llama-3.3-70b-versatile"
 
+    def get_expert_role(self, niche):
+        role_map = {
+            "comics": "highly energetic pop-culture and comic book expert",
+            "space": "authoritative science and astronomy communicator",
+            "mysteries": "suspenseful investigative narrator of the unknown",
+            "tech_ai": "sharp futurist and technology analyst",
+            "psychology": "insightful psychology and human behavior expert",
+            "geography": "engaging geography and world-culture explorer",
+            "worldnews": "professional and objective global news anchor",
+        }
+        return role_map.get(niche, "highly informative educator")
+
     def repair_json(self, json_str):
         try:
             json_str = re.sub(r"^[^{]*", "", json_str)
@@ -22,30 +34,26 @@ class ScriptGenerator:
         except:
             return None
 
-    def generate_meta_prompt(self, niche, source_text):
-        """
-        The Meta-Prompt: AI generates the persona and visual rules BEFORE writing the script.
-        """
+    def generate_meta_prompt(self, niche, source_text, expert_role):
         print(f"🕵️‍♂️ AI Strategist: Analyzing '{niche}' news to build custom persona...")
 
         meta_prompt = f"""
-        TASK: You are a Master YouTube Shorts Strategist. 
-        I am going to give you a raw news story about {niche}.
-        You need to invent a highly specific, engaging Persona/Role for the scriptwriter, and generate a pool of 10 aesthetic visual search terms for the video editor.
-        
-        NEWS STORY: "{source_text[:1500]}"
-        
-        REQUIREMENTS:
-        1. 'system_prompt': Write a 3-sentence persona. Make it perfectly match the mood of the news.
-        2. 'visual_keywords': Provide exactly 10 highly cinematic, specific stock video search terms. Do NOT use generic words.
-        
-        OUTPUT ONLY JSON:
-        {{
-            "system_prompt": "Your custom persona here...",
-            "visual_keywords": ["keyword 1", "keyword 2", "keyword 3"]
-        }}
+            TASK: You are a Master YouTube Shorts Strategist. 
+            I am going to give you a raw news story about {niche}.
+            You need to invent a highly specific, engaging Persona/Role for the scriptwriter, and identify the core subject of the video.
+            
+            NEWS STORY: "{source_text[:1500]}"
+            
+            REQUIREMENTS:
+            1. 'system_prompt': Write a 3-sentence persona. You MUST adopt the tone of a {expert_role}. Ignore any personal anecdotes or fluff in the news.
+            2. 'core_subject': In 1 to 3 words, what is the exact physical subject of this news? (e.g., "Deep Space", "Cybersecurity", "Ancient Egypt").
+            
+            OUTPUT ONLY JSON:
+            {{
+                "system_prompt": "Your custom persona here...",
+                "core_subject": "subject here"
+            }}
         """
-
         try:
             chat_completion = self.client.chat.completions.create(
                 messages=[{"role": "user", "content": meta_prompt}],
@@ -56,8 +64,8 @@ class ScriptGenerator:
         except Exception as e:
             print(f"❌ Meta-Prompting Error: {e}")
             return {
-                "system_prompt": "You are a highly energetic YouTube Shorts creator.",
-                "visual_keywords": ["Cinematic", "Epic", "Abstract"],
+                "system_prompt": f"You are a {expert_role} creating YouTube Shorts.",
+                "core_subject": "General News",  # 🟢 FIX: Clean string fallback
             }
 
     def generate_script(self):
@@ -70,46 +78,56 @@ class ScriptGenerator:
         source = task.get("content", "")[:3000]
         source_url = task.get("source_url", "https://news.google.com")
 
-        meta_data = self.generate_meta_prompt(niche, source)
-        sys_prompt = meta_data.get("system_prompt", "You are a Viral Content Creator.")
-        visual_kw_list = meta_data.get(
-            "visual_keywords", ["Cinematic", "Epic", "Abstract"]
-        )
+        expert_role = self.get_expert_role(niche)
+        meta_data = self.generate_meta_prompt(niche, source, expert_role)
+
+        sys_prompt = meta_data.get("system_prompt", f"You are a {expert_role}.")
+        core_subject = meta_data.get("core_subject", niche)
         pre_hashtags = task.get("predefined_hashtags", "#Shorts #Viral")
 
+        # 🟢 FIX: Numbering correctly ordered and Anchor Rule properly integrated
         prompt = f"""
             ROLE: {sys_prompt}
-            TASK: Convert this news into a structured video script and optimize its discoverability. Convert this news into a short, punchy video script between 50 seconds minimum and 65 seconds maximum.
+            TASK: You are a {expert_role} and a master of YouTube Shorts retention. Read the provided source material and write a highly informative, engaging, high-tension script. You MUST explain complex topics or news in simple terms so a general audience can learn something new. If the news is boring, make it sound interesting and crispy. Keep the script between 60 seconds minimum and 75 seconds maximum.
             SOURCE: "{source}"
             
             REQUIREMENTS:
-            1. **TONE & AUTHENTICITY (CRITICAL FOR VOICEOVER)**: Follow your assigned ROLE strictly. You are writing a script that will be read by an AI voice. 
-                - You MUST use heavy punctuation. Use commas (,), ellipses (...), question marks (?), and em-dashes (—) to force the voice engine to pause, breathe, and sound human.
-                - Write the way people actually speak.
-            2. Break the story between 4-6 distinct SCENES. Each scene must be 7 to 8 seconds.
-            3. 'text': The narration for that scene.
+            1. **THE HOOK (CRITICAL)**: The first sentence MUST be a pattern-interrupt. Start with a phrase like "What if I told you..." or make a bold, shocking, or mysterious claim to immediately stop the viewer from scrolling. Do NOT ask generic theoretical questions.
             
-            4. **VISUALS & B-ROLL (DYNAMIC PACING & NO DUPLICATES)**:
-                - You must act as a Video Editor and pace the visuals based on the length of the scene's 'text':
-                    - SHORT scene (under 10 words): Provide EXACTLY 1 search phrase and set 'image_count': 1.
-                    - MODERATE scene (10-18 words): Provide EXACTLY 2 search phrases and set 'image_count': 2.
-                    - LONG scene (18+ words): Provide EXACTLY 3 search phrases and set 'image_count': 3.
-                - **INSPIRATION BOARD**: {visual_kw_list}. Use these aesthetic themes as a guide, but THINK FOR YOURSELF to match the narration. Add unique modifiers.
-                - **CRITICAL - NO DUPLICATES**: NEVER repeat a search phrase. Every phrase in the script must be 100% unique.
+            2. **TONE, STORYTELLING & PACING (CRITICAL FOR VOICEOVER)**: 
+                - Follow your assigned ROLE strictly. Write the way people actually speak.
+                - Do not sound like Wikipedia. Use short, punchy sentences.
+                - **OPTIMIZED RULE**: Transform dry or boring news into a highly captivating, fast-paced narrative. Use creative phrasing and analogies to explain facts, but NEVER invent or exaggerate the underlying data.
+                - Build tension using words like "terrifying," "bizarre," "hidden," or "breakthrough."
+                - You MUST use heavy punctuation (..., —, ?, !) to force the AI voice engine to pause, breathe, build suspense, and sound human.
             
-            5.  **METADATA & SEO**:
+            3. **STRICTLY FACTUAL (NO FLUFF)**: This is an educational/news channel. 
+                - DO NOT include personal stories, "I" statements, or motivational fluff from the source. 
+                - Extract ONLY hard facts, history, science, or news updates. If the article is an interview, ignore the person and explain the subject matter objectively.
+                
+
+            4. **SCENE STRUCTURE**: Break the story into 4-6 distinct SCENES. Each scene must be 7 to 8 seconds of spoken 'text'.
+            
+            5. **VISUALS & B-ROLL (THE "DUMB SEARCH" & ANCHOR RULES)**:
+                - Stock video sites (like Pexels) are literal and DO NOT understand abstract concepts, sci-fi, or complex theories. You MUST translate concepts into BASIC, PHYSICAL, CINEMATIC nouns.
+                    - BAD: "Fermi paradox dark forest"
+                    - GOOD: "Dark creepy forest at night", "Cinematic glowing galaxy"
+                - **THE ANCHOR**: The core subject of this video is "{core_subject}". Every single visual search keyword MUST explicitly include this subject or tie directly to it physically to avoid random off-topic videos.
+                - Pace visuals based on scene length:
+                    - SHORT scene (under 10 words): EXACTLY 1 search phrase ('image_count': 1).
+                    - MODERATE scene (10-18 words): EXACTLY 2 search phrases ('image_count': 2).
+                    - LONG scene (18+ words): EXACTLY 3 search phrases ('image_count': 3).
+                - **NO DUPLICATES**: NEVER repeat a search phrase. Every phrase must be 100% unique.
+            
+            6. **METADATA & SEO**:
                 - 'title': MUST be "Clickbait" style. High curiosity. Max 50 chars.
                 - 'description': 3-sentence summary + call to action.
                 - 'hashtags': Use these exactly: {pre_hashtags}, and add 5 more specific ones.
                 - 'tags': An array of 10-15 highly searched SEO keywords.
             
-            6. **CRITICAL - CTA & OUTRO RULES**: 
-                - The FINAL SCENE must drive an explicit call to action. 
-                - You MUST end the entire script with the exact phrase: "Please like, share, and subscribe!"
-            
-            7. **NARRATION**:
-                - Scene 1 MUST be a fast, high-energy "Hook".
-                - Because the video ends with a standard CTA, do not attempt to loop the script. End the video naturally after asking them to subscribe.
+            7. **CTA & OUTRO**: 
+                - The FINAL SCENE must drive an explicit call to action ending with the exact phrase: "Please like, share, and subscribe!"
+                - **CRITICAL**: You MUST still output the 'keywords' array and 'image_count' for this final scene. Apply the "Dumb Search Rule" tied to the "{core_subject}" anchor, completely ignoring the word "subscribe" to prevent makeup vlogger videos. Do not loop the script; end naturally.
             
             OUTPUT FORMAT (JSON ONLY):
             {{
@@ -151,7 +169,6 @@ class ScriptGenerator:
             with open(meta_filename, "w", encoding="utf-8") as f:
                 f.write(f"TITLE: {data.get('title')}\nHASHTAGS: {data.get('hashtags')}")
 
-            # 🟢 FIX: Safely join the tags array back into a comma-separated string for YouTube
             raw_tags = data.get("tags", [])
             formatted_tags = (
                 ", ".join(raw_tags) if isinstance(raw_tags, list) else str(raw_tags)
