@@ -158,7 +158,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "slot",
         nargs="?",
-        help="The time slot (morning/noon/evening/night)",
+        help="The time slot (mid_night/4_am/8_am/mid_day/4_pm/8_pm)",
         default=None,
     )
     parser.add_argument(
@@ -168,17 +168,21 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    # Determine dynamic slot if none was provided in command line
+    # 🟢 UPDATED: Determine dynamic slot matching the 4-hour intervals
     target_slot = args.slot
     if not target_slot:
         h = datetime.datetime.now().hour
-        if 5 <= h < 12:
-            target_slot = "morning"
-        elif 12 <= h < 17:
-            target_slot = "noon"
-        elif 17 <= h < 21:
-            target_slot = "evening"
+        if 0 <= h < 4:
+            target_slot = "mid_night"
+        elif 4 <= h < 8:
+            target_slot = "4_am"
+        elif 8 <= h < 12:
+            target_slot = "8_am"
+        elif 12 <= h < 16:
+            target_slot = "mid_day"
+        elif 16 <= h < 20:
+            target_slot = "4_pm"
         else:
-            target_slot = "night"
+            target_slot = "8_pm"
 
     run_creation_pipeline(target_slot, args.manual)

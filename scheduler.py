@@ -24,21 +24,21 @@ def job(slot):
 
 # --- 📅 THE SCHEDULE ---
 # Adjust times as needed
-schedule.every().day.at("01:27").do(job, slot="morning")  # Motivation
-schedule.every().day.at("05:30").do(job, slot="noon")  # Space
-schedule.every().day.at("08:30").do(job, slot="evening")  # Nature
-schedule.every().day.at("10:30").do(job, slot="night")  # History
+# schedule.every().day.at("01:27").do(job, slot="morning")  # Motivation
+# schedule.every().day.at("05:30").do(job, slot="noon")  # Space
+# schedule.every().day.at("08:30").do(job, slot="evening")  # Nature
+# schedule.every().day.at("10:30").do(job, slot="night")  # History
 
-# schedule.every().day.at("00:15").do(job, slot="mid_nignt")
-# schedule.every().day.at("04:00").do(job, slot="4_am")
-# schedule.every().day.at("08:00").do(job, slot="8_am")
-# schedule.every().day.at("12:00").do(job, slot="mid_day")
-# schedule.every().day.at("16:00").do(job, slot="4_pm")
-# schedule.every().day.at("20:00").do(job, slot="8_pm")
+schedule.every().day.at("00:15").do(job, slot="mid_night")
+schedule.every().day.at("04:00").do(job, slot="4_am")
+schedule.every().day.at("08:00").do(job, slot="8_am")
+schedule.every().day.at("12:26").do(job, slot="mid_day")
+schedule.every().day.at("16:00").do(job, slot="4_pm")
+schedule.every().day.at("20:00").do(job, slot="8_pm")
 
 print("===================================================")
 print("🤖 THE KNOWLEDGE SPECTRUM: GROQ AUTOPILOT ENGAGED")
-print("   - Schedule: 4 Times Daily")
+print("   - Schedule: 6 Times Daily")
 print("   - Press Ctrl+C to stop")
 print("===================================================")
 

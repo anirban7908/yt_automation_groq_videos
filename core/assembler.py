@@ -20,6 +20,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 class VideoAssembler:
     def __init__(self):
         self.db = DBManager()
+        self.model = whisper.load_model("base")
 
     def assemble(self):
         task = self.db.collection.find_one({"status": "ready_to_assemble"})
@@ -127,7 +128,6 @@ class VideoAssembler:
         full_audio_path = os.path.join(folder, "FULL_AUDIO_TEMP.mp3")
         full_video.audio.write_audiofile(full_audio_path, logger=None)
 
-        self.model = whisper.load_model("base")
         print("📝 Generating Captions...")
         result = self.model.transcribe(
             full_audio_path, word_timestamps=True, fp16=False

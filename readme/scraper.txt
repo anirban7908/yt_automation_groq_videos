@@ -1,79 +1,32 @@
-File: scraper.py
+YOUTUBE AUTOMATION PROJECT - MODULE DOCUMENTATION
+===============================================
+File: core/scraper.py
 
 1. What it does?
-This file is the "Content Hunter" of your automation pipeline. Its job is to go out to the internet, find fresh news articles based on the current time of day (e.g., "Tech" at noon, "Nature" in the evening), and save them into your database.
-
-Key Upgrade: Instead of just picking a random story, it now uses Artificial Intelligence (AI) to analyze all found headlines and select the one with the highest potential to go viral. It also includes a safety net: if the AI fails, it automatically falls back to a random selection to ensure the system never stops.
+This file is the "Content Hunter" of your automation pipeline. Its job is to go out to the internet, find fresh news articles based on the current 4-hour time block (e.g., 8_am, mid_day), and save them into your database.
+Key Upgrade: Instead of just picking a random story, it uses the Groq API (Llama 3.3) to analyze all found headlines and select the TOP 3 with the highest potential to go viral. It then filters those against your database to ensure you never make a duplicate video. If all 3 have been used, it loops back and tries again automatically.
 
 2. What are the libraries used?
-Here are the libraries imported in this file and why they are used:
-
-* requests
-  - Definition: The standard Python library for sending HTTP requests (like a web browser does).
-  - Why used here?: It is used inside `fetch_rss` to actually download the raw data (XML files) from the news websites (e.g., TechCrunch, ScienceDaily).
-
-* feedparser
-  - Definition: A specialized library for parsing RSS and Atom feeds.
-  - Why used here?: Raw news data comes in XML format, which is hard to read. `feedparser` takes that messy XML and turns it into a clean Python list of articles with properties like `.title` and `.summary`.
-
-* random
-  - Definition: A Python module for generating random numbers or making random selections.
-  - Why used here?: It acts as the "Safety Net". If the AI fails to pick a winner (or crashes), `random.choice` takes over to ensure a video is still created.
-
-* datetime
-  - Definition: A module for manipulating dates and times.
-  - Why used here?: It is used in `get_time_slot` to check the current hour (e.g., 2 PM) so the bot knows whether to look for "Tech" news or "Nature" news.
-
-* ollama
-  - Definition: A library to interact with local Large Language Models (like Llama 3).
-  - Why used here?: This is the "Brain of the Judge". It sends the list of headlines to your local AI model and asks it to pick the most "viral" one based on shock value and curiosity.
-
-* re (Regular Expressions)
-  - Definition: A powerful tool for matching patterns in text.
-  - Why used here?: It is used to extract the specific number (index) from the AI's text response (e.g., extracting "3" from "I choose headline number 3").
-
-* core.db_manager.DBManager
-  - Definition: Your custom class that handles database connections.
-  - Why used here?: The scraper needs this to save the new tasks (`add_task`) and, crucially, to check if a story was already done (`task_exists`) so you don't make duplicate videos.
+* requests: The standard Python library for sending HTTP requests. Used to download the raw XML data from news websites.
+* feedparser: A specialized library that takes the messy XML from RSS feeds and parses it into clean, readable Python lists (extracting titles, summaries, and links).
+* random: Used as a fallback safety net. If the AI fails to pick a winner, `random.choice` takes over to ensure the pipeline never stalls.
+* datetime: Used to check the current hour so the bot knows which of the 6 time slots to trigger (e.g., "4_pm").
+* groq: The official Groq API client. Replaces local models to provide lightning-fast, cloud-based AI reasoning for judging the most viral headlines.
+* json & re: Used to parse and clean the strict JSON outputs returned by the Groq AI, ensuring the bot can accurately extract the selected headline numbers.
+* os & dotenv: Used to securely load your hidden API keys (GROQ_API_KEY) from your local .env file.
+* core.db_manager.DBManager: Your custom database class. Used to save new tasks and check history to prevent duplicate videos.
 
 3. Which is the main function and what does it do?
+Main Function: `scrape_targeted_niche(self, forced_slot=None)`
+This orchestrates the entire gathering process:
+  1. Strategy Selection: Identifies the current time slot and randomly selects a niche from `MASTER_NICHES` that hasn't been used yet today.
+  2. Gathering: Loops through every RSS feed for that niche and compiles a list of candidates.
+  3. The Judge (AI): Calls `pick_top_3_viral_topics` to let Groq analyze the candidates and return the 3 most viral options.
+  4. The Filter Loop: Checks the top 3 against the database. It loops up to 4 times to guarantee it finds a completely unique, unused viral story.
+  5. Saving: Commits the final winner to the database with the status "pending", attaching specific hashtags and assigning the correct voice model.
 
-Main Function: scrape_targeted_niche(self, forced_slot=None)
-
-Description:
-This is the "Brain" of the scraper. It orchestrates the entire process of finding news.
-1. Strategy Selection: It calls `get_time_slot` (or uses `forced_slot`) to decide the topic (e.g., "tech").
-2. Gathering: It loops through every URL defined in `niche_map` and calls `fetch_rss` to get articles.
-3. Filtering: It checks every single article against the database (`self.db.task_exists`). If the video already exists (checked via the new 7-day fuzzy match), it skips it.
-4. Selection (The Judge): It calls `pick_viral_topic` to let AI choose the best story.
-5. Saving: It saves the winner to the database with the status "pending", ready for the Script Generator to take over.
-
-Helper Functions & Components Discussion:
-
-* pick_viral_topic(self, candidates, niche) (NEW)
-  - Purpose: The AI Logic that replaces pure randomness.
-  - How it works:
-    1. Formats the list of headlines into a numbered list (1. Headline A, 2. Headline B...).
-    2. Sends a prompt to Ollama: "Pick the most VIRAL YouTube Short headline..."
-    3. Uses Regex (`re`) to find the number in the AI's answer.
-    4. Fallback: If the AI errors out or returns no number, it prints a warning and returns `random.choice(candidates)` instead.
-
-* headers = {"User-Agent": "Mozilla/5.0"}
-  - Purpose: This pretends to be a real web browser (Mozilla Firefox/Chrome).
-  - Why?: Many news sites block automated bots (Python scripts). By sending this header, you "trick" the site into thinking a human is visiting, so they don't block your connection.
-
-* niche_map
-  - Purpose: A configuration dictionary that acts as a schedule.
-  - Why?: It maps time slots (morning, noon, evening, night) to specific topics and their corresponding RSS feed URLs.
-
-* get_time_slot(self)
-  - Purpose: Returns a string ("morning", "noon", etc.) based on the current hour.
-  - Why?: It allows the bot to be dynamic. If you run it at 8 AM, it gets motivation news. If you run it at 8 PM, it gets history news.
-
-* fetch_rss(self, url)
-  - Purpose: Downloads and parses a single RSS feed.
-  - How it works:
-    1. It uses `requests.get(url)` to grab the data.
-    2. It checks if the request was successful (`status_code == 200`).
-    3. It passes the content to `feedparser.parse()`.
-    4. It returns the top 10 entries (articles) found in that feed.
+4. Helper Functions & Key Variables
+* MASTER_NICHES: The master configuration dictionary. Replaces the old `niche_map`. It holds the specific RSS feeds, custom hashtags, and designated Microsoft Edge-TTS voice models (e.g., British narrator for Space) for 7 different topics.
+* pick_top_3_viral_topics: Sends the headlines to Groq with strict instructions to return a JSON array of the 3 best indices. 
+* get_time_slot: Calculates the current hour and returns one of the 6 new dynamic slots (mid_night, 4_am, 8_am, mid_day, 4_pm, 8_pm).
+* fetch_rss: Reaches out to the website pretending to be a real web browser (using a Mozilla User-Agent header) to bypass bot-blockers, returning the top 10 articles from that feed.

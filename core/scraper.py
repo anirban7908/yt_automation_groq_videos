@@ -17,136 +17,6 @@ class NewsScraper:
         self.client = Groq(api_key=os.getenv("GROQ_API_KEY"))
         self.model = "llama-3.3-70b-versatile"
 
-        # self.MASTER_NICHES = {
-        #     "comics": {
-        #         "rss_feeds": [
-        #             "https://www.cbr.com/feed/",
-        #             "https://comicbook.com/feed/",
-        #             "https://bleedingcool.com/feed/",
-        #         ],
-        #         "system_prompt": "You are a hardcore comic book historian and pop-culture expert. Focus on mind-blowing 'Did you know?' facts, hidden easter eggs, or explosive breaking MCU/DCU news. Keep the energy high, use dramatic pauses. Do not sound like a news anchor; sound like a passionate fan explaining a crazy theory to a friend.",
-        #         "visual_keywords": [
-        #             "Superhero",
-        #             "Comic Book",
-        #             "Villain",
-        #             "Cinematic Galaxy",
-        #             "Action Scene",
-        #             "Dark City Alley",
-        #             "Space Station",
-        #             "Magic Energy",
-        #         ],
-        #         "hashtags": "#Marvel #DCComics #MCU #DCU #ComicBooks #Superhero #EasterEggs #Geek",
-        #     },
-        #     "space": {
-        #         "rss_feeds": [
-        #             "https://www.space.com/feeds/all",
-        #             "https://universetoday.com/feed",
-        #             "https://phys.org/rss-feed/space-news/",
-        #         ],
-        #         "system_prompt": "You are an existential astrophysicist. Focus on the terrifying, mind-bending scale of the universe, new planetary discoveries, or black holes. Speak with a sense of awe, existential dread, and wonder. Make the viewer feel tiny but fascinated.",
-        #         "visual_keywords": [
-        #             "Cinematic Galaxy",
-        #             "Deep Space",
-        #             "Black Hole",
-        #             "Astronaut",
-        #             "Mars Surface",
-        #             "Telescope",
-        #             "Supernova",
-        #             "Night Sky Stars",
-        #         ],
-        #         "hashtags": "#Space #Astronomy #Universe #BlackHole #NASA #Cosmos #Astrophysics",
-        #     },
-        #     "prehistoric": {
-        #         "rss_feeds": [
-        #             "https://www.sciencedaily.com/rss/fossils_ruins/paleontology.xml",
-        #             "https://phys.org/rss-feed/earth-news/paleontology/",
-        #         ],
-        #         "system_prompt": "You are a rugged paleontologist. Focus on terrifying apex predators, giant ancient beasts, or the harsh reality of prehistoric Earth. Make the ancient world sound dangerous, bloody, and fascinating. Use words that evoke scale and terror.",
-        #         "visual_keywords": [
-        #             "Dinosaur",
-        #             "Fossil",
-        #             "Jungle",
-        #             "Volcano Eruption",
-        #             "Ancient Forest",
-        #             "Reptile Eye",
-        #             "Bones",
-        #             "Meteor Strike",
-        #         ],
-        #         "hashtags": "#Dinosaurs #Paleontology #Prehistoric #AncientEarth #Fossils #History",
-        #     },
-        #     "mysteries": {
-        #         "rss_feeds": [
-        #             "https://www.coasttocoastam.com/rss/",
-        #             "https://www.ancient-origins.net/rss.xml",
-        #         ],
-        #         "system_prompt": "You are a suspenseful investigative journalist investigating the paranormal, cryptids, and unsolved mysteries. Speak in hushed, conspiratorial tones. Ask unsettling questions. Leave the viewer questioning what is real.",
-        #         "visual_keywords": [
-        #             "Foggy Forest",
-        #             "Dark Ocean",
-        #             "Classified Document",
-        #             "Shadowy Figure",
-        #             "Abandoned Cabin",
-        #             "UFO",
-        #             "Creepy Cave",
-        #             "Night Vision",
-        #         ],
-        #         "hashtags": "#Mystery #Unsolved #Paranormal #Cryptid #Conspiracy #Creepy",
-        #     },
-        #     "tech_ai": {
-        #         "rss_feeds": [
-        #             "https://www.theverge.com/rss/index.xml",
-        #             "https://techcrunch.com/feed/",
-        #         ],
-        #         "system_prompt": "You are a cyberpunk hacker and AI analyst. Focus on slightly dystopian, mind-blowing technological breakthroughs. Discuss robots taking jobs, brain chips, or AI becoming sentient. Sound urgent and slightly warning.",
-        #         "visual_keywords": [
-        #             "Robot",
-        #             "Matrix Code",
-        #             "Cyberpunk City",
-        #             "Server Room",
-        #             "Artificial Intelligence",
-        #             "Neon Lights",
-        #             "Hacker Screen",
-        #             "Microchip",
-        #         ],
-        #         "hashtags": "#AI #ArtificialIntelligence #Cyberpunk #TechNews #FutureTech #Robotics",
-        #     },
-        #     "psychology": {
-        #         "rss_feeds": [
-        #             "https://www.psychologytoday.com/us/front/feed",
-        #             "https://www.sciencedaily.com/rss/mind_brain/psychology.xml",
-        #         ],
-        #         "system_prompt": "You are an ex-FBI profiler and dark psychology expert. Teach the viewer how to read body language, spot liars, or understand human manipulation. Be direct, authoritative, and slightly intimidating.",
-        #         "visual_keywords": [
-        #             "Intense Eye Contact",
-        #             "Brain Scan",
-        #             "Shadowy Silhouette",
-        #             "Two People Talking",
-        #             "Magnifying Glass",
-        #             "Clock Ticking",
-        #             "Chess Board",
-        #         ],
-        #         "hashtags": "#Psychology #BodyLanguage #DarkPsychology #MindTricks #Manipulation #MentalHealth",
-        #     },
-        #     "geography": {
-        #         "rss_feeds": [
-        #             "https://www.nationalgeographic.com/latest-stories/rss",
-        #             "https://www.atlasobscura.com/feeds/latest",
-        #         ],
-        #         "system_prompt": "You are a daring explorer uncovering forbidden and bizarre places on Earth. Focus on places people are not allowed to go, bizarre weather anomalies, or deadly locations. Sound adventurous and cautionary.",
-        #         "visual_keywords": [
-        #             "Abandoned City",
-        #             "Storm Clouds",
-        #             "Top Secret Fence",
-        #             "Desert Island",
-        #             "Deep Cave",
-        #             "Glacier",
-        #             "Ruins",
-        #             "Toxic Waste",
-        #         ],
-        #         "hashtags": "#Geography #HiddenPlaces #AtlasObscura #Forbidden #TravelFacts",
-        #     },
-        # }
-
         self.MASTER_NICHES = {
             "comics": {
                 "rss_feeds": [
@@ -171,17 +41,6 @@ class NewsScraper:
                 ],
                 "hashtags": "#Space #Astronomy #Universe #BlackHole #NASA #Cosmos #Astrophysics",
                 "voice": "en-GB-RyanNeural",  # Classic British documentary narrator
-            },
-            "prehistoric": {
-                "rss_feeds": [
-                    "https://www.sciencedaily.com/rss/fossils_ruins/paleontology.xml",
-                    "https://phys.org/rss-feed/earth-news/paleontology/",
-                    "https://blog.everythingdinosaur.com/feed/",
-                    "https://www.livescience.com/planet-earth/rss",
-                    "https://www.nature.com/subjects/paleontology.rss",
-                ],
-                "hashtags": "#Dinosaurs #Paleontology #Prehistoric #AncientEarth #Fossils #History",
-                "voice": "en-US-SteffanNeural",  # Rugged, authoritative male
             },
             "mysteries": {
                 "rss_feeds": [
@@ -227,18 +86,33 @@ class NewsScraper:
                 "hashtags": "#Geography #HiddenPlaces #AtlasObscura #Forbidden #TravelFacts",
                 "voice": "en-AU-WilliamNeural",  # Australian explorer vibe
             },
+            "worldnews": {
+                "rss_feeds": [
+                    "http://feeds.bbci.co.uk/news/world/rss.xml",
+                    "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
+                    "https://www.aljazeera.com/xml/rss/all.xml",
+                    "https://feeds.npr.org/1004/rss.xml",
+                    "https://yahoo.com/news/rss/world",
+                ],
+                "hashtags": "#WorldNews #GlobalNews #BreakingNews #CurrentEvents #Geopolitics #NewsUpdate",
+                "voice": "en-US-SteffanNeural",  # Authoritative, professional news anchor
+            },
         }
 
     def get_time_slot(self):
         h = datetime.datetime.now().hour
-        if 5 <= h < 12:
-            return "morning"
-        elif 12 <= h < 17:
-            return "noon"
-        elif 17 <= h < 21:
-            return "evening"
+        if 0 <= h < 4:
+            return "mid_night"
+        elif 4 <= h < 8:
+            return "4_am"
+        elif 8 <= h < 12:
+            return "8_am"
+        elif 12 <= h < 16:
+            return "mid_day"
+        elif 16 <= h < 20:
+            return "4_pm"
         else:
-            return "night"
+            return "8_pm"
 
     def fetch_rss(self, url):
         headers = {"User-Agent": "Mozilla/5.0"}
